@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Upload, CheckCircle, Fingerprint, Loader2, FileText } from 'lucide-react';
+const baseURL = import.meta.env.VITE_API_URL
 
 const Phase1Upload = () => {
   const [loading, setLoading] = useState(false);
@@ -17,9 +18,9 @@ const Phase1Upload = () => {
 
     try {
       // Direct call to port 5000
-      const response = await axios.post('http://localhost:5000/api/patient/onboard', { 
+      const response = await axios.post(`${baseURL}/api/patient/onboard`, { 
         labData: formData 
-      });
+    });
 
       if (response.data.success) {
         setAssignedId(response.data.allvi_id);
