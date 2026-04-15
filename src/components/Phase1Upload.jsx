@@ -25,7 +25,7 @@ const Phase1Upload = () => {
     if (existingId) formData.append('existingId', existingId);
 
     try {
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const baseURL = import.meta.env.VITE_API_URL
       
       // Hit the new Gemini processing endpoint
       const response = await axios.post(`${baseURL}/api/patient/process-report`, formData, {

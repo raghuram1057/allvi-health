@@ -4,16 +4,21 @@ import Phase1Review from './components/Phase1Review';
 
 function App() {
   return (
-    <Routes>
-      {/* Page 1: The Upload screen */}
-      <Route path="/" element={<Phase1Upload />} />
-      
-      {/* Page 2: The Review/Parsing screen */}
-      <Route path="/review" element={<Phase1Review />} />
-      
-      {/* Phase 2: Dashboard (Placeholder for now) */}
-      <Route path="/dashboard" element={<div className="p-10">Dashboard Coming Soon...</div>} />
-    </Routes>
+    <div className="app-main">
+      <Routes>
+        {/* Default route */}
+        <Route path="/" element={<Phase1Upload />} />
+        
+        {/* Upload route */}
+        <Route path="/phase1upload" element={<Phase1Upload />} />
+        
+        {/* FIX: Ensure this matches exactly what's in your navigate('/review') */}
+        <Route path="/review" element={<Phase1Review />} />
+        
+        {/* If you are using /phase1review elsewhere, keep this too */}
+        <Route path="/phase1review" element={<Phase1Review />} />
+      </Routes>
+    </div>
   );
 }
 
