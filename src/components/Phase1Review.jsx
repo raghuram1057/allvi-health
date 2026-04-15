@@ -39,7 +39,10 @@ const Phase1Review = () => {
   const handleConfirmSave = async () => {
     setSaving(true);
     try {
-      const baseURL = import.meta.env.VITE_API_URL || 'https://allvibackend.onrender.com';
+      // Locally we use 5000, in production we use the Render URL
+      const baseURL = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000' 
+        : 'https://allvibackend.onrender.com';
       
       const response = await axios.post(`${baseURL}/api/patient/confirm-results`, {
         patientId: allviId,
@@ -48,11 +51,15 @@ const Phase1Review = () => {
 
       if (response.data.success) {
         alert(`Success! Records saved under ID: ${allviId}`);
-        navigate('/phase1upload'); 
+        
+        // --- PHASE 2 REDIRECT ---
+        // Navigate to the dashboard with the patient's unique ID
+        navigate(`/dashboard/${allviId}`); 
       }
     } catch (error) {
       console.error("Final Save Error:", error);
-      alert("Database connection error. Please try again.");
+      const errorDetail = error.response?.data?.details || "Database connection error.";
+      alert(`Error: ${errorDetail}`);
     } finally {
       setSaving(false);
     }
@@ -88,7 +95,7 @@ const Phase1Review = () => {
         <div className="p-8">
           <div className="flex items-center gap-3 p-4 bg-amber-50 text-amber-700 rounded-xl mb-8 border border-amber-100 text-sm">
             <AlertCircle size={20} />
-            <p><strong>Phase 1:</strong> Verify the data below. Once saved, it will be stored anonymously against your ID.</p>
+            <p><strong>Phase 2:</strong> Verify your values. Saving will redirect you to your health trends dashboard.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -119,7 +126,7 @@ const Phase1Review = () => {
               </>
             ) : (
               <>
-                <Save size={20} /> Securely Save Records
+                <Save size={20} /> Confirm & View Dashboard
               </>
             )}
           </button>
