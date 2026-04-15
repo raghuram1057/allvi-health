@@ -26,7 +26,7 @@ const Phase1Review = () => {
     setLoading(true);
     try {
       const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await axios.post(`${baseURL}/api/patient/onboard`, { 
+      const response = await axios.post(`${baseURL}/api/patient/process-report`, { 
         labData: { ...parsedData, existingId } 
       });
 
