@@ -40,18 +40,6 @@ const Navbar = () => {
         }}>
           vi
         </span>
-        <span style={{ 
-            fontFamily: 'var(--serif)', 
-            fontSize: '28px', 
-            fontWeight: '300', 
-            fontStyle : "revert-layer",
-            letterSpacing: '-0.02em', 
-            color: "royalblue", 
-            opacity: 0.55 
-        }}>
-            -health
-        </span>
-        
       </Link>
 
       {/* RIGHT: OPTIONS */}
