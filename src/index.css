@@ -1,1 +1,42 @@
 @import "tailwindcss";
+@media print {
+    /* Hide buttons and nav in the PDF */
+    nav, button, .no-print {
+        display: none !important;
+    }
+
+    /* Ensure white background for clarity */
+    .app-main {
+        background-color: white !important;
+        padding: 0 !important;
+    }
+
+    /* Force page breaks between major sections */
+    h2 {
+        page-break-before: always;
+        margin-top: 30px;
+    }
+}
+:root {
+  --teal: #0F4C5C;
+  --ivory: #F7F1E8;
+  --charcoal: #1F2937;
+  --serif: 'Playfair Display', serif; /* Or your preferred serif */
+  --sans: 'Inter', sans-serif;
+}
+
+body {
+  background-color: var(--ivory);
+  color: var(--charcoal);
+  font-family: var(--sans);
+  margin: 0;
+}
+
+h1, h2, h3, .brand-font {
+  font-family: var(--serif);
+  color: var(--teal);
+}
+
+#dashboard-content * {
+  color-interpolation-filters: sRGB;
+}

@@ -7,7 +7,6 @@ const Phase1Review = () => {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Get data from Phase1Upload navigation state
   const { parsedData, allviId, fileName } = location.state || {};
 
   const [formData, setFormData] = useState({
@@ -22,12 +21,10 @@ const Phase1Review = () => {
 
   const [saving, setSaving] = useState(false);
 
-  // Sync AI data to form state on load
   useEffect(() => {
     if (parsedData) {
       setFormData(prev => ({ ...prev, ...parsedData }));
     } else {
-      // If someone accesses /review directly without uploading, send them back
       navigate('/phase1upload');
     }
   }, [parsedData, navigate]);
@@ -39,9 +36,8 @@ const Phase1Review = () => {
   const handleConfirmSave = async () => {
     setSaving(true);
     try {
-      // Locally we use 5000, in production we use the Render URL
-      const baseURL = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000' 
+      const baseURL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://127.0.0.1:5000' 
         : 'https://allvibackend.onrender.com';
       
       const response = await axios.post(`${baseURL}/api/patient/confirm-results`, {
@@ -51,9 +47,6 @@ const Phase1Review = () => {
 
       if (response.data.success) {
         alert(`Success! Records saved under ID: ${allviId}`);
-        
-        // --- PHASE 2 REDIRECT ---
-        // Navigate to the dashboard with the patient's unique ID
         navigate(`/dashboard/${allviId}`); 
       }
     } catch (error) {
@@ -66,42 +59,47 @@ const Phase1Review = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12 px-6">
-      <div className="max-w-2xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100">
+    /* Background: Ivory #F7F1E8 */
+    <div className="min-h-screen bg-[#F7F1E8] py-12 px-6">
+      <div className="max-w-2xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-200/60">
         
-        {/* Header */}
-        <div className="bg-slate-900 p-8 text-white">
+        {/* Header: Deep Teal #0F4C5C */}
+        <div className="bg-[#0F4C5C] p-8 text-[#F7F1E8]">
           <button 
             onClick={() => navigate('/phase1upload')}
-            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-4 text-sm"
+            className="flex items-center gap-2 text-[#F7F1E8]/70 hover:text-white transition-colors mb-4 text-sm font-medium"
           >
             <ArrowLeft size={16} /> Re-upload File
           </button>
           <div className="flex justify-between items-end">
             <div>
-              <h2 className="text-2xl font-bold flex items-center gap-2 text-blue-400">
-                <ClipboardCheck /> Review Lab Values
+              <h2 className="text-2xl font-bold flex items-center gap-2">
+                <ClipboardCheck className="text-[#F7F1E8]" /> Review Lab Values
               </h2>
-              <p className="text-slate-400 text-sm mt-1">Source: {fileName}</p>
+              <p className="text-[#F7F1E8]/70 text-sm mt-1">Source: {fileName}</p>
             </div>
             <div className="text-right">
-              <span className="block text-xs text-slate-400 uppercase font-bold tracking-widest">Unique ID</span>
-              <span className="text-xl font-mono text-white">{allviId}</span>
+              <span className="block text-xs text-[#F7F1E8]/50 uppercase font-bold tracking-widest">Unique ID</span>
+              <span className="text-xl font-mono font-bold">{allviId}</span>
             </div>
           </div>
         </div>
 
         {/* Edit Form */}
         <div className="p-8">
-          <div className="flex items-center gap-3 p-4 bg-amber-50 text-amber-700 rounded-xl mb-8 border border-amber-100 text-sm">
+          {/* Info Alert: Uses Deep Teal as an accent */}
+          <div className="flex items-center gap-3 p-4 bg-[#0F4C5C]/5 text-[#0F4C5C] rounded-xl mb-8 border border-[#0F4C5C]/10 text-sm">
             <AlertCircle size={20} />
-            <p><strong>Phase 2:</strong> Verify your values. Saving will redirect you to your health trends dashboard.</p>
+            <p className="font-medium">
+              Verify your values. Saving will redirect you to your health trends dashboard.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {Object.keys(formData).map((key) => (
               <div key={key} className="space-y-1">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                {/* Text: Charcoal #1F2937 */}
+                <label className="block text-xs font-bold text-[#1F2937]/50 uppercase tracking-wider">
                   {key.replace('_', ' ')}
                 </label>
                 <input
@@ -109,7 +107,8 @@ const Phase1Review = () => {
                   name={key}
                   value={formData[key] || ''}
                   onChange={handleChange}
-                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium text-slate-700"
+                  /* Input Background: Ivory #F7F1E8 base */
+                  className="w-full p-3 bg-[#F7F1E8]/30 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#0F4C5C] focus:bg-white outline-none transition-all font-medium text-[#1F2937]"
                 />
               </div>
             ))}
@@ -118,11 +117,12 @@ const Phase1Review = () => {
           <button
             onClick={handleConfirmSave}
             disabled={saving}
-            className="w-full mt-10 bg-blue-600 text-white py-4 rounded-2xl font-bold flex justify-center items-center gap-2 hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all disabled:opacity-50"
+            /* Action Button: Charcoal #1F2937 with Teal hover */
+            className="w-full mt-10 bg-[#1F2937] text-[#F7F1E8] py-4 rounded-2xl font-bold flex justify-center items-center gap-2 hover:bg-[#0F4C5C] shadow-lg shadow-[#1F2937]/10 transition-all disabled:opacity-40"
           >
             {saving ? (
               <>
-                <Loader2 className="animate-spin" /> Saving...
+                <Loader2 className="animate-spin" /> Saving Data...
               </>
             ) : (
               <>

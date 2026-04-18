@@ -12,7 +12,7 @@ const DashboardWrapper = () => {
 
 function App() {
   return (
-    <div className="app-container" style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+    <div className="app-container" style={{ minHeight: '100vh', backgroundColor: "#F7F1E8" }}>
       
       {/* NEW NAVBAR COMPONENT */}
       <Navbar />
