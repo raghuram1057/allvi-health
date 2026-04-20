@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ClipboardCheck, Save, AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
+import { ClipboardCheck, Save, AlertCircle, ArrowLeft, Loader2, UserCircle } from 'lucide-react';
 
 const Phase1Review = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  
-  const { parsedData, allviId, fileName } = location.state || {};
+
+  // Destructure state (age and gender are passed forward from upload)
+  const { parsedData, allviId, fileName, age, gender } = location.state || {};
 
   const [formData, setFormData] = useState({
     test_date: '',
@@ -23,7 +24,21 @@ const Phase1Review = () => {
 
   useEffect(() => {
     if (parsedData) {
-      setFormData(prev => ({ ...prev, ...parsedData }));
+      console.log("🔍 Review Page received state:", parsedData);
+
+      setFormData({
+        // 1. Check if test_date exists, otherwise use today
+        test_date: parsedData.test_date || new Date().toISOString().split('T')[0],
+
+        // 2. Map the flattened keys. 
+        // IMPORTANT: The keys must match what the AI named them (usually lowercase)
+        tsh: parsedData.tsh || '',
+        free_t3: parsedData.free_t3 || '',
+        free_t4: parsedData.free_t4 || '',
+        anti_tpo: parsedData.anti_tpo || '',
+        ferritin: parsedData.ferritin || '',
+        vit_d: parsedData.vit_d || ''
+      });
     } else {
       navigate('/phase1upload');
     }
@@ -37,78 +52,80 @@ const Phase1Review = () => {
     setSaving(true);
     try {
       const baseURL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? 'http://127.0.0.1:5000' 
+        ? 'http://127.0.0.1:5000'
         : 'https://allvibackend.onrender.com';
-      
+
       const response = await axios.post(`${baseURL}/api/patient/confirm-results`, {
         patientId: allviId,
         biomarkers: formData
       });
 
       if (response.data.success) {
-        alert(`Success! Records saved under ID: ${allviId}`);
-        navigate(`/dashboard/${allviId}`); 
+        // Direct to dashboard after successful row-based insertion
+        navigate(`/dashboard/${allviId}`);
       }
     } catch (error) {
-      console.error("Final Save Error:", error);
-      const errorDetail = error.response?.data?.details || "Database connection error.";
-      alert(`Error: ${errorDetail}`);
+      console.error("Save Error:", error);
+      alert(`Error: ${error.response?.data?.error || "Failed to save records."}`);
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    /* Background: Ivory #F7F1E8 */
     <div className="min-h-screen bg-[#F7F1E8] py-12 px-6">
       <div className="max-w-2xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-200/60">
-        
-        {/* Header: Deep Teal #0F4C5C */}
+
+        {/* Header Header */}
         <div className="bg-[#0F4C5C] p-8 text-[#F7F1E8]">
-          <button 
+          <button
             onClick={() => navigate('/phase1upload')}
             className="flex items-center gap-2 text-[#F7F1E8]/70 hover:text-white transition-colors mb-4 text-sm font-medium"
           >
-            <ArrowLeft size={16} /> Re-upload File
+            <ArrowLeft size={16} /> Change File
           </button>
+
           <div className="flex justify-between items-end">
             <div>
               <h2 className="text-2xl font-bold flex items-center gap-2">
-                <ClipboardCheck className="text-[#F7F1E8]" /> Review Lab Values
+                <ClipboardCheck /> Review Results
               </h2>
-              <p className="text-[#F7F1E8]/70 text-sm mt-1">Source: {fileName}</p>
+              {/* Show Demographics Badge */}
+              <div className="flex items-center gap-2 mt-2 bg-white/10 w-fit px-3 py-1 rounded-lg">
+                <UserCircle size={14} className="text-[#F7F1E8]/70" />
+                <span className="text-xs font-bold uppercase tracking-wider">
+                  {age} Years • {gender}
+                </span>
+              </div>
             </div>
             <div className="text-right">
-              <span className="block text-xs text-[#F7F1E8]/50 uppercase font-bold tracking-widest">Unique ID</span>
-              <span className="text-xl font-mono font-bold">{allviId}</span>
+              <span className="block text-[10px] text-[#F7F1E8]/50 uppercase font-black tracking-widest">Identity</span>
+              <span className="text-xl font-mono font-bold text-white">{allviId}</span>
             </div>
           </div>
         </div>
 
-        {/* Edit Form */}
         <div className="p-8">
-          {/* Info Alert: Uses Deep Teal as an accent */}
-          <div className="flex items-center gap-3 p-4 bg-[#0F4C5C]/5 text-[#0F4C5C] rounded-xl mb-8 border border-[#0F4C5C]/10 text-sm">
-            <AlertCircle size={20} />
-            <p className="font-medium">
-              Verify your values. Saving will redirect you to your health trends dashboard.
+          <div className="flex items-start gap-3 p-4 bg-[#F7F1E8] text-[#1F2937]/70 rounded-xl mb-8 border border-slate-200 text-sm">
+            <AlertCircle size={20} className="text-[#0F4C5C] shrink-0" />
+            <p>
+              Please confirm the extracted values match your lab report.
+              <strong> Age and gender</strong> are used to calculate optimal ranges.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
             {Object.keys(formData).map((key) => (
               <div key={key} className="space-y-1">
-                {/* Text: Charcoal #1F2937 */}
-                <label className="block text-xs font-bold text-[#1F2937]/50 uppercase tracking-wider">
+                <label className="block text-[10px] font-black text-[#1F2937]/40 uppercase tracking-widest">
                   {key.replace('_', ' ')}
                 </label>
                 <input
                   type={key === 'test_date' ? 'date' : 'text'}
                   name={key}
-                  value={formData[key] || ''}
+                  value={formData[key]}
                   onChange={handleChange}
-                  /* Input Background: Ivory #F7F1E8 base */
-                  className="w-full p-3 bg-[#F7F1E8]/30 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#0F4C5C] focus:bg-white outline-none transition-all font-medium text-[#1F2937]"
+                  className="w-full p-3 bg-white rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#0F4C5C] outline-none transition-all font-bold text-[#1F2937]"
                 />
               </div>
             ))}
@@ -117,18 +134,10 @@ const Phase1Review = () => {
           <button
             onClick={handleConfirmSave}
             disabled={saving}
-            /* Action Button: Charcoal #1F2937 with Teal hover */
             className="w-full mt-10 bg-[#1F2937] text-[#F7F1E8] py-4 rounded-2xl font-bold flex justify-center items-center gap-2 hover:bg-[#0F4C5C] shadow-lg shadow-[#1F2937]/10 transition-all disabled:opacity-40"
           >
-            {saving ? (
-              <>
-                <Loader2 className="animate-spin" /> Saving Data...
-              </>
-            ) : (
-              <>
-                <Save size={20} /> Confirm & View Dashboard
-              </>
-            )}
+            {saving ? <Loader2 className="animate-spin" /> : <Save size={20} />}
+            {saving ? " Creating Clinical Profile..." : " Confirm & View Analysis"}
           </button>
         </div>
       </div>

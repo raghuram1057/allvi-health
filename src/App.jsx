@@ -4,6 +4,8 @@ import Phase1Upload from './components/Phase1Upload';
 import Phase1Review from './components/Phase1Review';
 import Dashboard from './components/Dashboard';
 import AdminPortal from './components/AdminPortal'; 
+import PatientProfile from './components/PatientProfile';
+import UserPortal from './components/UserPortal';
 
 const DashboardWrapper = () => {
     const { id } = useParams();
@@ -25,6 +27,8 @@ function App() {
           <Route path="/review" element={<Phase1Review />} />
           <Route path="/admin" element={<AdminPortal />} />
           <Route path="/dashboard/:id" element={<DashboardWrapper />} />
+          <Route path="/profile/:patientId" element={<PatientProfile />} />
+          <Route path="/portal" element={<UserPortal />} />
           <Route path="*" element={<div style={{ padding: '40px' }}>404 - Not Found</div>} />
         </Routes>
       </main>
