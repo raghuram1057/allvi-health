@@ -22,6 +22,7 @@ function App() {
       {/* PAGE CONTENT */}
       <main style={{ padding: '20px' }}>
         <Routes>
+         
           <Route path="/" element={<Phase1Upload />} />
           <Route path="/phase1upload" element={<Phase1Upload />} />
           <Route path="/review" element={<Phase1Review />} />

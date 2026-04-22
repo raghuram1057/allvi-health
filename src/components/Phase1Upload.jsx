@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Upload, FileText, Loader2, ArrowRight, UserCircle, Users } from 'lucide-react';
+import { Upload, FileText, Loader2, ArrowRight, UserCircle, Users, Mail, MapPin, User } from 'lucide-react';
 
 const Phase1Upload = () => {
   const [file, setFile] = useState(null);
   const [existingId, setExistingId] = useState('');
+  // New State Variables
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [city, setCity] = useState('');
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('');
+  
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -21,8 +26,9 @@ const Phase1Upload = () => {
     if (!file) return alert("Please select a lab report to upload.");
     
     const isNewPatient = !existingId.trim();
-    if (isNewPatient && (!age || !gender)) {
-        return alert("New patients must provide Age and Gender for accurate AI clinical analysis.");
+    // Updated Validation
+    if (isNewPatient && (!age || !gender || !name || !email)) {
+        return alert("New patients must provide Name, Email, Age, and Gender.");
     }
 
     setLoading(true);
@@ -33,6 +39,10 @@ const Phase1Upload = () => {
     if (!isNewPatient) {
         formData.append('existingId', existingId.trim());
     } else {
+        // Appending new fields to FormData
+        formData.append('name', name);
+        formData.append('email', email);
+        formData.append('city', city);
         formData.append('age', age);
         formData.append('gender', gender);
     }
@@ -47,44 +57,20 @@ const Phase1Upload = () => {
       });
 
       if (response.data.success) {
-    const flattenedBiomarkers = {};
-    
-    // 1. Get the array from the nested response
-    const rawBiomarkers = response.data.parsedData?.biomarkers;
-
-    // 2. Loop through and map to keys the Review page expects
-    if (Array.isArray(rawBiomarkers)) {
-        rawBiomarkers.forEach(bm => {
-            if (bm && bm.name) {
-                // Normalize name (e.g., "Vitamin D" -> "vit_d")
-                let key = bm.name.toLowerCase().trim().replace(/\s+/g, '_');
-                
-                // Map common variations to your specific state keys
-                if (key.includes('tsh')) key = 'tsh';
-                if (key.includes('vit') && key.includes('d')) key = 'vit_d';
-                if (key.includes('ferritin')) key = 'ferritin';
-                
-                flattenedBiomarkers[key] = bm.value ?? '';
+        navigate('/review', {
+            state: {
+                parsedData: response.data.parsedData, 
+                allviId: response.data.allvi_id,
+                fileName: file.name,
+                name: name || response.data.name,
+                age: age || response.data.age,
+                gender: gender || response.data.gender
             }
         });
-    }
-
-    navigate('/review', {
-        state: {
-            parsedData: {
-                test_date: response.data.parsedData?.test_date || '',
-                ...flattenedBiomarkers // This adds tsh, vit_d, etc. to the object
-            },
-            allviId: response.data.allvi_id,
-            fileName: file.name,
-            age: age || response.data.age,
-            gender: gender || response.data.gender
-          }
-    });
-}
+      }
     } catch (error) {
       console.error("AI Processing Error:", error);
-      const errorMessage = error.response?.data?.details || "Failed to process report. Ensure server is running.";
+      const errorMessage = error.response?.data?.details || "Failed to process report.";
       alert(errorMessage);
     } finally {
       setLoading(false);
@@ -107,7 +93,7 @@ const Phase1Upload = () => {
         </div>
 
         <p className="text-[#1F2937]/70 text-sm mb-6 font-medium">
-          Upload your report. Our AI identifies biomarkers based on your age and gender profile.
+          Upload your report. Our AI identifies biomarkers based on your profile.
         </p>
 
         <form onSubmit={startProcessing} className="space-y-5">
@@ -126,35 +112,73 @@ const Phase1Upload = () => {
           </div>
 
           {!existingId.trim() && (
-            <div className="grid grid-cols-2 gap-4 p-4 bg-[#0F4C5C]/5 rounded-2xl border border-[#0F4C5C]/10 transition-all duration-300">
-               <div className="col-span-2">
-                  <p className="text-[10px] font-bold text-[#0F4C5C] uppercase mb-2 flex items-center gap-1">
-                     <UserCircle size={12}/> New Patient Initialization
-                  </p>
-               </div>
-               <div>
-                  <label className="block text-[9px] font-bold text-[#1F2937]/60 uppercase mb-1">Age</label>
+            <div className="space-y-3 p-4 bg-[#0F4C5C]/5 rounded-2xl border border-[#0F4C5C]/10 transition-all duration-300">
+                <p className="text-[10px] font-bold text-[#0F4C5C] uppercase flex items-center gap-1">
+                    <UserCircle size={12}/> New Patient Initialization
+                </p>
+                
+                {/* Name Input */}
+                <div>
+                  <label className="block text-[9px] font-bold text-[#1F2937]/60 uppercase mb-1">Full Name</label>
                   <input 
-                    type="number" 
-                    placeholder="Years"
-                    value={age}
-                    onChange={(e) => setAge(e.target.value)}
+                    type="text" 
+                    placeholder="John Doe"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     className="w-full p-2.5 bg-white rounded-lg border border-slate-200 text-sm outline-none focus:border-[#0F4C5C]"
                   />
-               </div>
-               <div>
-                  <label className="block text-[9px] font-bold text-[#1F2937]/60 uppercase mb-1">Gender</label>
-                  <select 
-                    value={gender}
-                    onChange={(e) => setGender(e.target.value)}
-                    className="w-full p-2.5 bg-white rounded-lg border border-slate-200 text-sm outline-none focus:border-[#0F4C5C]"
-                  >
-                    <option value="">Select</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-               </div>
+                </div>
+
+                {/* Email and City Row */}
+                <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[9px] font-bold text-[#1F2937]/60 uppercase mb-1">Email</label>
+                      <input 
+                        type="email" 
+                        placeholder="email@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full p-2.5 bg-white rounded-lg border border-slate-200 text-sm outline-none focus:border-[#0F4C5C]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-bold text-[#1F2937]/60 uppercase mb-1">City</label>
+                      <input 
+                        type="text" 
+                        placeholder="City Name"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        className="w-full p-2.5 bg-white rounded-lg border border-slate-200 text-sm outline-none focus:border-[#0F4C5C]"
+                      />
+                    </div>
+                </div>
+
+                {/* Age and Gender Row */}
+                <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[9px] font-bold text-[#1F2937]/60 uppercase mb-1">Age</label>
+                      <input 
+                        type="number" 
+                        placeholder="Years"
+                        value={age}
+                        onChange={(e) => setAge(e.target.value)}
+                        className="w-full p-2.5 bg-white rounded-lg border border-slate-200 text-sm outline-none focus:border-[#0F4C5C]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-bold text-[#1F2937]/60 uppercase mb-1">Gender</label>
+                      <select 
+                        value={gender}
+                        onChange={(e) => setGender(e.target.value)}
+                        className="w-full p-2.5 bg-white rounded-lg border border-slate-200 text-sm outline-none focus:border-[#0F4C5C]"
+                      >
+                        <option value="">Select</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                </div>
             </div>
           )}
 
