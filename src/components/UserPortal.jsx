@@ -34,7 +34,7 @@ const UserPortal = () => {
                 localStorage.setItem('user_profile', JSON.stringify(response.data.patient));
                 
                 // 3. Navigate to dashboard/profile
-                navigate(`/dashboard//${cleanId}`);
+                navigate(`/profile//${cleanId}`);
             }
         } catch (err) {
             console.error("Login Error:", err);
