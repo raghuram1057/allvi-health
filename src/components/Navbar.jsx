@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { Upload, Users, Menu, X, Calendar, Send, Loader2 } from 'lucide-react';
+import { Upload, Users, Menu, X, Calendar, Send, Loader2, LogIn } from 'lucide-react'; // Added LogIn icon
 import axios from 'axios';
 import allvi_logo from "../assets/allvi_logo.png";
 
@@ -48,13 +48,13 @@ const Navbar = ({ patientId }) => {
     <>
       <nav style={styles.nav}>
         <style>{`
-          /* Mobile specific adjustments */
           @media (max-width: 850px) {
             .nav-links-desktop { display: none !important; }
-            .menu-toggle { display: block !important; order: 3; }
+            .menu-toggle { display: block !important; order: 4; }
             .logo-section { order: 1; }
-            .appointment-btn-container { order: 2; margin-left: auto; margin-right: 15px; }
-            .btn-text { display: none; } /* Icon only on mobile */
+            .appointment-btn-container { order: 2; margin-left: auto; margin-right: 10px; }
+            .login-btn-container { order: 3; margin-right: 10px; }
+            .btn-text { display: none; } 
           }
           @media (min-width: 851px) {
             .nav-links-mobile { display: none !important; }
@@ -64,15 +64,16 @@ const Navbar = ({ patientId }) => {
 
         {/* LOGO SECTION */}
         <Link to="/" className="logo-section" style={styles.logoLink} onClick={() => setIsOpen(false)}>
-          <div style={styles.logoTextGroup,{
-            backgroundColor: '#0F4C5C', // Dark Teal background
-            width: '64px',              // Width and Height must be equal for a circle
+          <div style={{
+            ...styles.logoTextGroup,
+            backgroundColor: '#0F4C5C', 
+            width: '64px',              
             height: '64px',
-            borderRadius: '50%',        // This makes it a round shape
-            display: 'flex',            // Centers the text inside
+            borderRadius: '50%',        
+            display: 'flex',            
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(15, 76, 92, 0.2)' // Optional: adds depth
+            boxShadow: '0 4px 12px rgba(15, 76, 92, 0.2)' 
           }} >
             <span style={{ fontFamily: 'serif', fontSize: '24px', fontWeight: '700', color: '#b9c6ca' }}>All</span>
             <span style={{ fontFamily: 'serif', fontSize: '24px', fontWeight: '300', fontStyle: 'italic', color: '#bed2d7', opacity: 0.6 }}>vi</span>
@@ -84,11 +85,18 @@ const Navbar = ({ patientId }) => {
           <div style={styles.navGroup}>
             <NavLink to="/phase1upload" style={navLinkStyle}><Upload size={16} /> Upload</NavLink>
             <NavLink to="/admin" style={navLinkStyle}><Users size={16} /> AdminPortal</NavLink>
-            <NavLink to="/portal" style={navLinkStyle}><Users size={16} /> UserPortal</NavLink>
+            <NavLink to="/login" style={navLinkStyle}> <LogIn size={16} />Login</NavLink>
+            
+            {/* NEW LOGIN NAVLINK */}
+            <NavLink to="/register" style={navLinkStyle}>
+                <div style={styles.loginIconBtn}>
+                    Register
+                </div>
+            </NavLink>
           </div>
         </div>
 
-        {/* APPOINTMENT BUTTON (Visible on both) */}
+        {/* APPOINTMENT BUTTON */}
         <div className="appointment-btn-container">
           <button onClick={() => setIsModalOpen(true)} style={styles.appointmentBtn}>
             <Calendar size={18} />
@@ -101,17 +109,19 @@ const Navbar = ({ patientId }) => {
           {isOpen ? <X size={28} /> : <Menu size={28} />}
         </button>
 
-        {/* MOBILE DROPDOWN (Right Side) */}
+        {/* MOBILE DROPDOWN */}
         {isOpen && (
           <div className="nav-links-mobile" style={styles.mobileNavGroup}>
+            
             <NavLink to="/phase1upload" style={navLinkStyle} onClick={() => setIsOpen(false)}><Upload size={18} /> Upload Report</NavLink>
             <NavLink to="/admin" style={navLinkStyle} onClick={() => setIsOpen(false)}><Users size={18} /> Admin Portal</NavLink>
-            <NavLink to="/portal" style={navLinkStyle} onClick={() => setIsOpen(false)}><Users size={18} /> User Portal</NavLink>
+            <NavLink to="/login" style={navLinkStyle} onClick={() => setIsOpen(false)}><LogIn size={18} />Login</NavLink>
+            <NavLink to="/register" style={navLinkStyle,styles.loginIconBtn}  onClick={() => setIsOpen(false)}>Register</NavLink>
           </div>
         )}
       </nav>
 
-      {/* MODAL */}
+      {/* MODAL (Unchanged) */}
       {isModalOpen && (
         <div style={styles.modalOverlay}>
           <div style={styles.modalContent}>
@@ -143,6 +153,7 @@ const Navbar = ({ patientId }) => {
 };
 
 const styles = {
+  // Existing styles...
   nav: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -155,13 +166,22 @@ const styles = {
     zIndex: 1000,
   },
   logoLink: { display: 'flex', alignItems: 'center', textDecoration: 'none', gap: '12px' },
-  logoCircle: { width: '38px', height: '38px', borderRadius: '50%', overflow: 'hidden', border: '2px solid #0F4C5C', backgroundColor: '#fff' },
-  logoImg: { width: '100%', height: '100%', objectFit: 'cover' },
-  logoTextGroup: { display: 'flex', alignItems: 'baseline', backgroundColor: "#0F4C5C" },
-
-  // Desktop Right Alignment
+  logoTextGroup: { display: 'flex', alignItems: 'baseline' },
   desktopRightGroup: { display: 'flex', alignItems: 'center', marginLeft: 'auto', marginRight: '40px' },
   navGroup: { display: 'flex', gap: '30px', alignItems: 'center' },
+  
+  // Custom Login Button Style inside NavLink
+  loginIconBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px 16px',
+    borderRadius: '10px',
+    border: '1.5px solid #0F4C5C',
+    color: '#0F4C5C',
+    transition: 'all 0.3s ease',
+    maxWidth:"6rem",
+  },
 
   appointmentBtn: {
     backgroundColor: '#0F4C5C',
@@ -178,16 +198,12 @@ const styles = {
     letterSpacing: '0.5px',
     boxShadow: '0 4px 15px rgba(15, 76, 92, 0.2)',
   },
-
   menuButton: { background: 'none', border: 'none', color: '#0F4C5C', cursor: 'pointer', padding: '5px' },
-
-  // Mobile Dropdown (Right side)
   mobileNavGroup: {
     display: 'flex', flexDirection: 'column', position: 'absolute', top: '100%', right: 0, width: '100%',
     backgroundColor: '#F7F1E8', padding: '30px', gap: '25px', borderBottom: '1px solid rgba(0,0,0,0.05)',
     borderLeft: '1px solid rgba(0,0,0,0.05)', boxShadow: '-10px 10px 20px rgba(0,0,0,0.05)'
   },
-
   modalOverlay: {
     position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
     backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'center'
