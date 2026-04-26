@@ -44,6 +44,7 @@ const UserPortal = () => {
         }
     };
 
+    
     return (
         <div className="min-h-screen bg-[#F7F1E8] flex items-center justify-center p-6 font-sans">
             <div className="max-w-4xl w-full grid md:grid-cols-2 bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-200">

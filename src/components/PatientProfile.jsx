@@ -62,7 +62,9 @@ const PatientProfile = () => {
                             <User size={44} />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-black tracking-tight uppercase">{patientId}</h1>
+                            <p className="text-3xl text-white/60 font-white tracking-tight uppercase">{patientId}</p>
+                            
+
                             <p className="text-white/60 text-xs font-black uppercase tracking-[0.2em] mt-1">
                                 Clinical Profile • {demographics.age}Y • {demographics.gender}
                             </p>
