@@ -3,17 +3,29 @@ import React, { useState } from 'react';
 const RegisterPage = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 9;
+  
+  // Loading state to disable the button while saving to backend
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Centralized state for the form data
   const [formData, setFormData] = useState({
+    // Section 1
     conditions: [], conditionOther: '', diagnosedWhen: '', diagnosedBy: [],
+    // Section 2
     symptomsEnergy: [], symptomsDigestion: [], symptomsMental: [], symptomsSleep: [], symptomsOther: [], symptomsOtherText: '', worstSymptoms: '',
+    // Section 3
     takingMedication: '', medicationDetails: '', medicationDuration: '', supplements: '',
+    // Section 4
     lastLabs: '', labFile: null, additionalLabs: [],
+    // Section 5
     providerSatisfaction: '', upcomingAppt: '', apptDate: '',
+    // Section 6
     dietaryChanges: [], dietOther: '', stressLevel: '', sleepQuality: '', exercise: '', exerciseType: '',
+    // Section 7
     topGoals: '', topHelp: '', topHelpOther: '', anythingElse: '',
+    // Section 8
     commPlatform: [], commPlatformOther: '', commTime: '',
+    // Section 9
     fullName: '', email: '', phone: '', dob: '', gender: '', genderOther: '', location: ''
   });
 
@@ -43,10 +55,47 @@ const RegisterPage = () => {
     window.scrollTo(0, 0);
   };
 
-  const handleSubmit = (e) => {
+  // --- SUBMIT FUNCTION TO BACKEND ---
+ const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Submitting Intake Form Data:', formData);
-    alert("Form submitted successfully! Check console for data.");
+    setIsSubmitting(true);
+    
+    const baseURL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://127.0.0.1:5000' 
+        : 'https://allvibackend.onrender.com';
+
+    try {
+      // NOTE: Make sure "/api/patients/submit-intake" exactly matches what is in your server.js
+      const response = await fetch(`${baseURL}/api/patient/submit-intake`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      // --- GRACEFUL ERROR HANDLING ---
+      // If the server returns an HTML 404 page, this stops it from trying to parse it as JSON
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+          throw new Error(`Server returned HTML instead of JSON. Check your fetch URL. Status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert(`Form submitted successfully! Your ALLVI ID is: ${result.allvi_id}`);
+        // Optional: Redirect the user to a dashboard or success page here
+        // window.location.href = `/dashboard/${result.allvi_id}`;
+      } else {
+        alert(`Error submitting form: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Network Error:", error);
+      alert(`Submission failed: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // --- REUSABLE UI COMPONENTS ---
@@ -76,6 +125,7 @@ const RegisterPage = () => {
             />
             <span className="text-gray-700 font-medium">{opt}</span>
           </label>
+          {/* Conditional Input for "Other" */}
           {otherOption === opt && formData[category].includes(opt) && (
             <div className="ml-8 mt-2 transition-all duration-300 ease-in-out">
               <textarea
@@ -109,6 +159,7 @@ const RegisterPage = () => {
             />
             <span className="text-gray-700 font-medium">{opt}</span>
           </label>
+          {/* Conditional Input for "Other" */}
           {otherOption === opt && formData[name] === opt && (
             <div className="ml-8 mt-2 transition-all duration-300 ease-in-out">
               {otherType === "date" ? (
@@ -225,11 +276,15 @@ const RegisterPage = () => {
                 <RadioGroup name="takingMedication" options={["Yes", "No", "I was prescribed medication but haven't started yet"]} />
               </div>
               
-              <div className="mb-6">
-                <Label text="If yes, what medication and dosage?" />
-                <textarea name="medicationDetails" value={formData.medicationDetails} onChange={handleChange} rows="2" className="w-full p-3 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-[#0F4C5C]"></textarea>
-              </div>
+              {/* Conditional Medication Details block */}
+              {formData.takingMedication === "Yes" && (
+                <div className="mb-6 animate-fade-in">
+                  <Label text="If yes, what medication and dosage?" />
+                  <textarea name="medicationDetails" value={formData.medicationDetails} onChange={handleChange} rows="2" className="w-full p-3 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-[#0F4C5C] shadow-sm"></textarea>
+                </div>
+              )}
               
+              {/* Always visible Dropdown */}
               <div className="mb-8">
                 <Label text="How long have you been on this medication?" required />
                 <select name="medicationDuration" value={formData.medicationDuration} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-md outline-none bg-white focus:ring-2 focus:ring-[#0F4C5C]" required>
@@ -300,20 +355,24 @@ const RegisterPage = () => {
                 />
               </div>
 
-              <div className="mb-6">
-                <Label text="Please share approximate date" />
-                <input 
-                  type="date" 
-                  name="apptDate" 
-                  value={formData.apptDate} 
-                  onChange={handleChange} 
-                  className="w-full p-3 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-[#0F4C5C] shadow-sm max-w-md" 
-                />
-              </div>
+              {/* Always visible standalone field */}
+              {formData.upcomingAppt === "Yes (please share approximate date)" && (
+                <div className="mb-6 animate-fade-in">
+                  <Label text="Please share approximate date" />
+                  <input 
+                    type="date" 
+                    name="apptDate" 
+                    value={formData.apptDate} 
+                    onChange={handleChange} 
+                    className="w-full p-3 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-[#0F4C5C] shadow-sm max-w-md" 
+                    required 
+                  />
+                </div>
+              )}
             </div>
           )}
 
-          {/* STEP 6: Lifestyle - UPDATED TO MATCH SCREENSHOT */}
+          {/* STEP 6: Lifestyle */}
           {currentStep === 6 && (
             <div className="animate-fade-in">
                <SectionHeader title="Section 6: Lifestyle" />
@@ -342,17 +401,19 @@ const RegisterPage = () => {
                 />
               </div>
               
-              {/* Always visible standalone field matching the screenshot */}
-              <div className="mb-6">
-                <Label text="If yes, what type of exercise?" />
-                <textarea 
-                  name="exerciseType" 
-                  value={formData.exerciseType} 
-                  onChange={handleChange} 
-                  rows="3" 
-                  className="w-full p-3 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-[#0F4C5C] shadow-sm"
-                ></textarea>
-              </div>
+              {/* Always visible standalone field */}
+              {(formData.exercise === "Yes, regularly (3+ times per week)" || formData.exercise === "Yes, occasionally (1-2 times per week)") && (
+                <div className="mb-6 animate-fade-in">
+                  <Label text="If yes, what type of exercise?" />
+                  <textarea 
+                    name="exerciseType" 
+                    value={formData.exerciseType} 
+                    onChange={handleChange} 
+                    rows="3" 
+                    className="w-full p-3 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-[#0F4C5C] shadow-sm"
+                  ></textarea>
+                </div>
+              )}
             </div>
           )}
 
@@ -468,10 +529,11 @@ const RegisterPage = () => {
             ) : (
               <button 
                 type="submit" 
-                className="px-8 py-3 bg-[#0F4C5C] text-white font-semibold rounded-lg shadow hover:bg-[#0c3d49] transition duration-200 flex items-center justify-center gap-2 w-full sm:w-auto"
+                disabled={isSubmitting}
+                className={`px-8 py-3 font-semibold rounded-lg shadow transition duration-200 flex items-center justify-center gap-2 w-full sm:w-auto ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#0F4C5C] text-white hover:bg-[#0c3d49]'}`}
               >
-                Submit Intake Form
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+                {isSubmitting ? 'Submitting...' : 'Submit Intake Form'}
+                {!isSubmitting && <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>}
               </button>
             )}
           </div>
