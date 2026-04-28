@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const RegisterPage = () => {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 9;
   
@@ -55,8 +58,8 @@ const RegisterPage = () => {
     window.scrollTo(0, 0);
   };
 
-  // --- SUBMIT FUNCTION TO BACKEND ---
- const handleSubmit = async (e) => {
+  // --- UPGRADED SUBMIT FUNCTION FOR REVIEW ROUTING ---
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     
@@ -65,34 +68,72 @@ const RegisterPage = () => {
         : 'https://allvibackend.onrender.com';
 
     try {
-      // NOTE: Make sure "/api/patients/submit-intake" exactly matches what is in your server.js
-      const response = await fetch(`${baseURL}/api/patient/submit-intake`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+      // 1. Create FormData to handle the file upload alongside text
+      const payload = new FormData();
 
-      // --- GRACEFUL ERROR HANDLING ---
-      // If the server returns an HTML 404 page, this stops it from trying to parse it as JSON
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-          throw new Error(`Server returned HTML instead of JSON. Check your fetch URL. Status: ${response.status}`);
+      // 2. Append standard text fields
+      payload.append('fullName', formData.fullName);
+      payload.append('email', formData.email);
+      payload.append('dob', formData.dob);
+      payload.append('gender', formData.gender);
+      payload.append('location', formData.location);
+      payload.append('topGoals', formData.topGoals);
+      payload.append('topHelp', formData.topHelp);
+      payload.append('anythingElse', formData.anythingElse);
+      payload.append('conditionOther', formData.conditionOther);
+      payload.append('symptomsOtherText', formData.symptomsOtherText);
+
+      // 3. Stringify array fields so the backend can parse them safely
+      payload.append('conditions', JSON.stringify(formData.conditions));
+      payload.append('symptomsEnergy', JSON.stringify(formData.symptomsEnergy));
+      payload.append('symptomsDigestion', JSON.stringify(formData.symptomsDigestion));
+      payload.append('symptomsMental', JSON.stringify(formData.symptomsMental));
+      payload.append('symptomsSleep', JSON.stringify(formData.symptomsSleep));
+      payload.append('symptomsOther', JSON.stringify(formData.symptomsOther));
+
+      // 4. Append the uploaded file if it exists
+      if (formData.labFile) {
+        payload.append('labReport', formData.labFile);
       }
 
-      const result = await response.json();
+      // 5. Send using Axios to handle multipart form data
+      const response = await axios.post(`${baseURL}/api/patient/submit-intake`, payload, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
 
-      if (result.success) {
-        alert(`Form submitted successfully! Your ALLVI ID is: ${result.allvi_id}`);
-        // Optional: Redirect the user to a dashboard or success page here
-        // window.location.href = `/dashboard/${result.allvi_id}`;
+      if (response.data.success) {
+        
+        // ── NEW ROUTING LOGIC TO REVIEW SCREEN ──
+        // If a file was uploaded AND the AI parsed it successfully, go to Review Page
+        if (formData.labFile && response.data.parsedData) {
+            
+            // Calculate age to pass to the Review UI
+            let calcAge = '';
+            if (formData.dob) {
+                const diff = Date.now() - new Date(formData.dob).getTime();
+                calcAge = Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
+            }
+
+            // Navigate to Review Page and pass the data exactly how Phase1Review expects it
+            navigate('/review', { 
+                state: {
+                    parsedData: response.data.parsedData,
+                    allviId: response.data.allvi_id,
+                    age: calcAge,
+                    gender: formData.gender
+                }
+            });
+        } else {
+            // If no file was uploaded, or AI extraction failed, skip review and go to Dashboard
+            navigate(`/dashboard/${response.data.allvi_id}`);
+        }
+
       } else {
-        alert(`Error submitting form: ${result.error}`);
+        alert(`Error submitting form: ${response.data.error}`);
       }
     } catch (error) {
       console.error("Network Error:", error);
-      alert(`Submission failed: ${error.message}`);
+      alert(`Submission failed: ${error.message || "Could not reach server"}`);
     } finally {
       setIsSubmitting(false);
     }

@@ -16,11 +16,9 @@ const AIInsights = ({ patientId, intake }) => {
                     ? 'http://127.0.0.1:5000' 
                     : 'https://allvibackend.onrender.com';
                 
-                // Fetch the AI data from the backend route we updated
                 const res = await axios.get(`${baseURL}/api/patient/insights/${patientId}`);
 
                 if (res.data.success && res.data.insights) {
-                    // Parse the plain text from Gemini into our 3 columns
                     const parsed = parseInsightsText(res.data.insights);
                     setInsightsData(parsed);
                 }
@@ -34,7 +32,6 @@ const AIInsights = ({ patientId, intake }) => {
         fetchInsights();
     }, [patientId]);
 
-    // Helper function to read the AI's text and sort it into the 3 columns
     const parseInsightsText = (text) => {
         const parsed = { optimal: [], monitor: [], critical: [] };
         let currentSection = null;
@@ -45,33 +42,24 @@ const AIInsights = ({ patientId, intake }) => {
             const cleanLine = line.trim();
             if (!cleanLine) return;
 
-            // Identify which section the AI is currently listing
             if (cleanLine.toUpperCase().includes('POSITIVE TRENDS')) {
-                currentSection = 'optimal';
-                return;
+                currentSection = 'optimal'; return;
             }
             if (cleanLine.toUpperCase().includes('AREAS OF CONCERN')) {
-                currentSection = 'monitor';
-                return;
+                currentSection = 'monitor'; return;
             }
             if (cleanLine.toUpperCase().includes('NEEDS ATTENTION')) {
-                currentSection = 'critical';
-                return;
+                currentSection = 'critical'; return;
             }
 
-            // Extract the bullet points and assign to the correct column
             if (currentSection && (cleanLine.startsWith('-') || cleanLine.startsWith('*') || cleanLine.match(/^\d+\./))) {
-                // Remove the bullet point characters (*, -, 1.)
                 const point = cleanLine.replace(/^[-*\d.\s]+/, '').replace(/\*\*/g, '').trim();
                 if (point) parsed[currentSection].push(point);
-            } 
-            // Fallback if the AI writes a paragraph instead of bullets
-            else if (currentSection && cleanLine.length > 15 && !cleanLine.includes('**')) {
+            } else if (currentSection && cleanLine.length > 15 && !cleanLine.includes('**')) {
                 parsed[currentSection].push(cleanLine.replace(/\*\*/g, ''));
             }
         });
 
-        // Add fallbacks just in case the AI leaves a column empty
         if (parsed.optimal.length === 0) parsed.optimal.push("No significant positive trends detected in current data.");
         if (parsed.monitor.length === 0) parsed.monitor.push("No borderline markers currently flagged for monitoring.");
         if (parsed.critical.length === 0) parsed.critical.push("No immediate critical actions required based on available data.");
@@ -79,7 +67,6 @@ const AIInsights = ({ patientId, intake }) => {
         return parsed;
     };
 
-    // Skeleton Loader Component
     if (loading) {
         return (
             <div className="space-y-6 animate-pulse">
@@ -112,25 +99,16 @@ const AIInsights = ({ patientId, intake }) => {
 
     const categories = [
         {
-            title: "Optimal / Stable",
-            color: "bg-emerald-50 text-emerald-900 border-emerald-200",
-            icon: <ShieldCheck className="text-emerald-600" size={24} />,
-            borderColor: "border-emerald-500",
-            points: insightsData.optimal
+            title: "Optimal / Stable", color: "bg-emerald-50 text-emerald-900 border-emerald-200",
+            icon: <ShieldCheck className="text-emerald-600" size={24} />, points: insightsData.optimal
         },
         {
-            title: "Monitor / Borderline",
-            color: "bg-amber-50 text-amber-900 border-amber-200",
-            icon: <AlertTriangle className="text-amber-600" size={24} />,
-            borderColor: "border-amber-500",
-            points: insightsData.monitor
+            title: "Monitor / Borderline", color: "bg-amber-50 text-amber-900 border-amber-200",
+            icon: <AlertTriangle className="text-amber-600" size={24} />, points: insightsData.monitor
         },
         {
-            title: "Requires Attention",
-            color: "bg-rose-50 text-rose-900 border-rose-200",
-            icon: <AlertCircle className="text-rose-600" size={24} />,
-            borderColor: "border-rose-500",
-            points: insightsData.critical
+            title: "Requires Attention", color: "bg-rose-50 text-rose-900 border-rose-200",
+            icon: <AlertCircle className="text-rose-600" size={24} />, points: insightsData.critical
         }
     ];
 
@@ -138,14 +116,11 @@ const AIInsights = ({ patientId, intake }) => {
         <div className="space-y-6 ai-insights-container">
             <div className="flex flex-col md:flex-row md:items-center justify-between px-2 no-print gap-4">
                 <h2 className="text-xs font-black text-[#1F2937]/40 uppercase tracking-[0.25em]">Allvi AI Health Insights</h2>
-                
-                {/* Dynamically show the patient's goal if available from the intake form */}
                 {intake?.goals && (
                     <div className="bg-[#0F4C5C]/5 text-[#0F4C5C] px-3 py-1.5 rounded-md text-[10px] font-bold border border-[#0F4C5C]/10 flex-1 md:max-w-md truncate">
                         Target: {intake.goals}
                     </div>
                 )}
-
                 <div className="flex items-center gap-2 text-[10px] font-bold text-[#0F4C5C] bg-[#0F4C5C]/10 px-3 py-1.5 rounded-full flex-shrink-0">
                     <User size={12} /> ID: {patientId}
                 </div>
@@ -153,11 +128,7 @@ const AIInsights = ({ patientId, intake }) => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {categories.map((cat, index) => (
-                    <div 
-                        key={index} 
-                        className={`${cat.color} p-5 rounded-2xl border print:border-[0.5pt] print:shadow-none print:bg-white shadow-sm flex flex-col h-full`}
-                        style={{ breakInside: 'avoid' }}
-                    >
+                    <div key={index} className={`${cat.color} p-5 rounded-2xl border print:border-[0.5pt] print:shadow-none print:bg-white shadow-sm flex flex-col h-full`} style={{ breakInside: 'avoid' }}>
                         <div className="flex items-center gap-3 mb-4">
                             {cat.icon}
                             <h3 className="font-black text-sm uppercase tracking-tight">{cat.title}</h3>

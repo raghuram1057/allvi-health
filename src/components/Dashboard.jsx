@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import axios from 'axios';
 import Papa from 'papaparse';
@@ -725,11 +725,12 @@ const PatientReviewView = ({ reviews }) => {
 
 // ─── MAIN DASHBOARD ────────────────────────────────────────────────────────────
 
-const Dashboard = ({ patientId }) => {
+const Dashboard = () => {
     const navigate = useNavigate();
     const [data, setData] = useState({ labs: [], symptoms: [], specialistReviews: [] });
     const [demographics, setDemographics] = useState({ age: '—', gender: '—' });
     const [intakeData, setIntakeData] = useState(null);
+    const { patientId } = useParams();
 
     // ✅ HOOK MOVED HERE: Safely inside the component
     const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
@@ -802,12 +803,20 @@ const Dashboard = ({ patientId }) => {
     };
 
     const getMergedLabData = () => {
-        const merged = {};
+        // Initialize the merged object with an empty 'meta' object so it can hold the units/ranges
+        const merged = { meta: {} };
+
         if (data.labs && data.labs.length > 0) {
             [...data.labs].reverse().forEach(report => {
                 Object.entries(report).forEach(([k, v]) => {
+                    // Skip the structural keys
                     if (!['id', 'test_date', 'report_type', 'created_at', 'patient_id', 'meta'].includes(k) && !(k in merged)) {
-                        merged[k] = v;
+                        merged[k] = v; // Save the value (e.g., 2.5)
+
+                        // CRITICAL FIX: Also grab the meta info (unit, ref_range) for this specific marker
+                        if (report.meta && report.meta[k]) {
+                            merged.meta[k] = report.meta[k];
+                        }
                     }
                 });
             });
@@ -825,20 +834,33 @@ const Dashboard = ({ patientId }) => {
     const handleCSVUpload = (e) => {
         const file = e.target.files[0];
         if (!file) return;
+
         Papa.parse(file, {
-            header: true, skipEmptyLines: true,
+            header: true,
+            skipEmptyLines: 'greedy', // <-- CRITICAL: Removes empty rows/trailing spaces
+            transformHeader: (header) => header.trim(), // <-- Cleans up header names
             complete: async (results) => {
                 try {
+                    // Filter out any rows that don't have a date (protects the backend)
+                    const validData = results.data.filter(row => row.date || row.Date);
+
+                    if (validData.length === 0) {
+                        return alert("No valid symptom data found in CSV.");
+                    }
+
                     await axios.post(`${baseURL}/api/patient/import-symptoms`, {
-                        patientId, symptoms: results.data
+                        patientId: patientId,
+                        symptoms: validData
                     });
-                    alert("Tally data imported successfully!");
-                    fetchDashboardData();
-                } catch (err) { console.error("Import failed", err); }
+
+                    alert("Symptoms imported successfully!");
+                    window.location.reload(); // Refresh to see the new chart
+                } catch (err) {
+                    console.error("Import failed", err);
+                }
             }
         });
     };
-
     const ChartCard = ({ title, dataKey, color, data }) => {
         const latestEntry = [...data].reverse().find(entry => entry[dataKey] !== undefined);
         const meta = latestEntry?.meta?.[dataKey] || {};
@@ -997,18 +1019,19 @@ const Dashboard = ({ patientId }) => {
                         <div className="bg-white p-6 rounded-xl border border-black/10 print:border-black print:border-[0.5pt]">
                             <div style={{ width: '100%', height: 320 }}>
                                 {isMounted && (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={data.symptoms}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                            <XAxis dataKey="date" tick={{ fontSize: 10 }} axisLine={false} />
-                                            <YAxis domain={[0, 10]} tick={{ fontSize: 10 }} axisLine={false} />
-                                            <Legend verticalAlign="top" height={40} iconType="circle" />
-                                            <Line name="Energy" type="monotone" dataKey="energy" stroke="#f59e0b" strokeWidth={3} isAnimationActive={false} />
-                                            <Line name="Sleep" type="monotone" dataKey="sleep" stroke="#0F4C5C" strokeWidth={3} isAnimationActive={false} />
-                                            <Line name="Mood" type="monotone" dataKey="mood" stroke="#10b981" strokeWidth={3} isAnimationActive={false} />
-                                            <Line name="Stress" type="monotone" dataKey="stress" stroke="#ef4444" strokeWidth={3} isAnimationActive={false} />
-                                            <Line name="Joint Pain" type="monotone" dataKey="joint_pain" stroke="#8b5cf6" strokeWidth={3} isAnimationActive={false} />
-                                        </LineChart>
+                                    <ResponsiveContainer  style={{ width: '100%', height: 320, minHeight: 320, position: 'relative' }}>
+                                        {/* Notice the added minHeight and flex constraints */}
+                                         {isMounted && data.symptoms && data.symptoms.length > 0 ? (
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <LineChart data={data.symptoms}>
+                                                        {/* ... your LineChart components ... */}
+                                                    </LineChart>
+                                                </ResponsiveContainer>
+                                            ) : (
+                                                <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400 font-medium italic">
+                                                    No symptom data available yet.
+                                                </div>
+                                            )}
                                     </ResponsiveContainer>
                                 )}
                             </div>
@@ -1022,7 +1045,7 @@ const Dashboard = ({ patientId }) => {
                                 labData={getMergedLabData()}
                                 patientGoal={demographics.goal || 'general'}
                                 demographics={demographics}
-                                intake={intakeData} 
+                                intake={intakeData}
                             />
                         </div>
 
@@ -1056,8 +1079,8 @@ const Dashboard = ({ patientId }) => {
                                 }
                             }}
                             className={`px-8 py-5 rounded-2xl font-black uppercase text-sm tracking-widest transition-all flex items-center justify-center gap-3 shadow-xl w-full max-w-lg ${isGeneratingSummary
-                                    ? 'bg-gray-400 text-white cursor-not-allowed'
-                                    : 'bg-[#0F4C5C] text-[#F7F1E8] hover:scale-[1.02] active:scale-95'
+                                ? 'bg-gray-400 text-white cursor-not-allowed'
+                                : 'bg-[#0F4C5C] text-[#F7F1E8] hover:scale-[1.02] active:scale-95'
                                 }`}
                         >
                             {isGeneratingSummary ? (
