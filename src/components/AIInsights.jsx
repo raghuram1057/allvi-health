@@ -1,7 +1,84 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { ShieldCheck, AlertCircle, AlertTriangle, User, Activity } from 'lucide-react';
 
-const AIInsights = ({ patientId, insights = {}, loading = false }) => {
+const AIInsights = ({ patientId, intake }) => {
+    const [insightsData, setInsightsData] = useState({ optimal: [], monitor: [], critical: [] });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!patientId) return;
+
+        const fetchInsights = async () => {
+            try {
+                setLoading(true);
+                const baseURL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+                    ? 'http://127.0.0.1:5000' 
+                    : 'https://allvibackend.onrender.com';
+                
+                // Fetch the AI data from the backend route we updated
+                const res = await axios.get(`${baseURL}/api/patient/insights/${patientId}`);
+
+                if (res.data.success && res.data.insights) {
+                    // Parse the plain text from Gemini into our 3 columns
+                    const parsed = parseInsightsText(res.data.insights);
+                    setInsightsData(parsed);
+                }
+            } catch (error) {
+                console.error("Error fetching AI insights:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchInsights();
+    }, [patientId]);
+
+    // Helper function to read the AI's text and sort it into the 3 columns
+    const parseInsightsText = (text) => {
+        const parsed = { optimal: [], monitor: [], critical: [] };
+        let currentSection = null;
+
+        const lines = text.split('\n');
+
+        lines.forEach(line => {
+            const cleanLine = line.trim();
+            if (!cleanLine) return;
+
+            // Identify which section the AI is currently listing
+            if (cleanLine.toUpperCase().includes('POSITIVE TRENDS')) {
+                currentSection = 'optimal';
+                return;
+            }
+            if (cleanLine.toUpperCase().includes('AREAS OF CONCERN')) {
+                currentSection = 'monitor';
+                return;
+            }
+            if (cleanLine.toUpperCase().includes('NEEDS ATTENTION')) {
+                currentSection = 'critical';
+                return;
+            }
+
+            // Extract the bullet points and assign to the correct column
+            if (currentSection && (cleanLine.startsWith('-') || cleanLine.startsWith('*') || cleanLine.match(/^\d+\./))) {
+                // Remove the bullet point characters (*, -, 1.)
+                const point = cleanLine.replace(/^[-*\d.\s]+/, '').replace(/\*\*/g, '').trim();
+                if (point) parsed[currentSection].push(point);
+            } 
+            // Fallback if the AI writes a paragraph instead of bullets
+            else if (currentSection && cleanLine.length > 15 && !cleanLine.includes('**')) {
+                parsed[currentSection].push(cleanLine.replace(/\*\*/g, ''));
+            }
+        });
+
+        // Add fallbacks just in case the AI leaves a column empty
+        if (parsed.optimal.length === 0) parsed.optimal.push("No significant positive trends detected in current data.");
+        if (parsed.monitor.length === 0) parsed.monitor.push("No borderline markers currently flagged for monitoring.");
+        if (parsed.critical.length === 0) parsed.critical.push("No immediate critical actions required based on available data.");
+
+        return parsed;
+    };
+
     // Skeleton Loader Component
     if (loading) {
         return (
@@ -39,29 +116,37 @@ const AIInsights = ({ patientId, insights = {}, loading = false }) => {
             color: "bg-emerald-50 text-emerald-900 border-emerald-200",
             icon: <ShieldCheck className="text-emerald-600" size={24} />,
             borderColor: "border-emerald-500",
-            points: insights.optimal || ["TSH levels remain stable within the reference range.", "Vitamin D levels showing consistent upward progression."]
+            points: insightsData.optimal
         },
         {
             title: "Monitor / Borderline",
             color: "bg-amber-50 text-amber-900 border-amber-200",
             icon: <AlertTriangle className="text-amber-600" size={24} />,
             borderColor: "border-amber-500",
-            points: insights.monitor || ["Ferritin stores are at the lower end of optimal; monitor intake.", "Slight correlation detected between late sleep and elevated stress markers."]
+            points: insightsData.monitor
         },
         {
             title: "Requires Attention",
             color: "bg-rose-50 text-rose-900 border-rose-200",
             icon: <AlertCircle className="text-rose-600" size={24} />,
             borderColor: "border-rose-500",
-            points: insights.critical || ["Joint pain reports have increased by 20% this week.", "Anti-TPO levels suggest the need for a follow-up consultation."]
+            points: insightsData.critical
         }
     ];
 
     return (
         <div className="space-y-6 ai-insights-container">
-            <div className="flex items-center justify-between px-2 no-print">
+            <div className="flex flex-col md:flex-row md:items-center justify-between px-2 no-print gap-4">
                 <h2 className="text-xs font-black text-[#1F2937]/40 uppercase tracking-[0.25em]">Allvi AI Health Insights</h2>
-                <div className="flex items-center gap-2 text-[10px] font-bold text-[#0F4C5C] bg-[#0F4C5C]/10 px-3 py-1 rounded-full">
+                
+                {/* Dynamically show the patient's goal if available from the intake form */}
+                {intake?.goals && (
+                    <div className="bg-[#0F4C5C]/5 text-[#0F4C5C] px-3 py-1.5 rounded-md text-[10px] font-bold border border-[#0F4C5C]/10 flex-1 md:max-w-md truncate">
+                        Target: {intake.goals}
+                    </div>
+                )}
+
+                <div className="flex items-center gap-2 text-[10px] font-bold text-[#0F4C5C] bg-[#0F4C5C]/10 px-3 py-1.5 rounded-full flex-shrink-0">
                     <User size={12} /> ID: {patientId}
                 </div>
             </div>

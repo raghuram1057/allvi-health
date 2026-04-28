@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import axios from 'axios';
 import Papa from 'papaparse';
 import {
     Activity, Printer, FileUp, Shield, Clock, UserCheck, Info,
-    Calendar, Send, X, Loader2, FlaskConical, Search, ChevronDown, ChevronUp, AlertTriangle
+    Calendar, Send, X, Loader2, FlaskConical, Search, ChevronDown,
+    ChevronUp, AlertTriangle, ClipboardList, FilePlus, CheckCircle2, FileText
 } from 'lucide-react';
 import AIInsights from './AIInsights';
 
@@ -17,13 +19,13 @@ const MARKER_REGISTRY = {
         color: '#0F4C5C',
         accent: '#d1fae5',
         markers: {
-            tsh:            { label: 'TSH',             unit: 'mIU/L',   range: [0.4, 4.0],   optimal: [0.5, 2.5],  note: 'Optimal for fertility: 0.5–2.5' },
-            free_t3:        { label: 'Free T3',          unit: 'pg/mL',   range: [2.3, 4.2],   optimal: [3.0, 4.2],  note: null },
-            free_t4:        { label: 'Free T4',          unit: 'ng/dL',   range: [0.8, 1.8],   optimal: [1.1, 1.8],  note: null },
-            tpo_antibodies: { label: 'TPO Antibodies',   unit: 'IU/mL',   range: [0, 35],      optimal: [0, 15],     note: "Elevated suggests Hashimoto's" },
-            tgab:           { label: 'TgAb',             unit: 'IU/mL',   range: [0, 4],       optimal: [0, 2],      note: null },
-            tsi:            { label: 'TSI',              unit: '%',       range: [0, 140],     optimal: [0, 100],    note: "Elevated suggests Graves'" },
-            trab:           { label: 'TRAb',             unit: 'IU/L',    range: [0, 1.75],    optimal: [0, 1.0],    note: null },
+            tsh: { label: 'TSH', unit: 'mIU/L', range: [0.4, 4.0], optimal: [0.5, 2.5], note: 'Optimal for fertility: 0.5–2.5' },
+            free_t3: { label: 'Free T3', unit: 'pg/mL', range: [2.3, 4.2], optimal: [3.0, 4.2], note: null },
+            free_t4: { label: 'Free T4', unit: 'ng/dL', range: [0.8, 1.8], optimal: [1.1, 1.8], note: null },
+            tpo_antibodies: { label: 'TPO Antibodies', unit: 'IU/mL', range: [0, 35], optimal: [0, 15], note: "Elevated suggests Hashimoto's" },
+            tgab: { label: 'TgAb', unit: 'IU/mL', range: [0, 4], optimal: [0, 2], note: null },
+            tsi: { label: 'TSI', unit: '%', range: [0, 140], optimal: [0, 100], note: "Elevated suggests Graves'" },
+            trab: { label: 'TRAb', unit: 'IU/L', range: [0, 1.75], optimal: [0, 1.0], note: null },
         }
     },
     metabolic: {
@@ -32,10 +34,10 @@ const MARKER_REGISTRY = {
         color: '#92400e',
         accent: '#fef3c7',
         markers: {
-            fasting_glucose: { label: 'Fasting Glucose', unit: 'mg/dL',   range: [70, 99],   optimal: [72, 90],   note: 'Prediabetes: 100–125' },
-            fasting_insulin: { label: 'Fasting Insulin', unit: 'µIU/mL',  range: [2, 10],    optimal: [2, 7],     note: 'Optimal <7 for PCOS' },
-            homa_ir:         { label: 'HOMA-IR',          unit: 'index',   range: [0, 1.9],   optimal: [0, 1.5],   note: '>2.5 suggests insulin resistance' },
-            hba1c:           { label: 'HbA1c',            unit: '%',       range: [4.0, 5.6], optimal: [4.0, 5.3], note: 'Prediabetes: 5.7–6.4%' },
+            fasting_glucose: { label: 'Fasting Glucose', unit: 'mg/dL', range: [70, 99], optimal: [72, 90], note: 'Prediabetes: 100–125' },
+            fasting_insulin: { label: 'Fasting Insulin', unit: 'µIU/mL', range: [2, 10], optimal: [2, 7], note: 'Optimal <7 for PCOS' },
+            homa_ir: { label: 'HOMA-IR', unit: 'index', range: [0, 1.9], optimal: [0, 1.5], note: '>2.5 suggests insulin resistance' },
+            hba1c: { label: 'HbA1c', unit: '%', range: [4.0, 5.6], optimal: [4.0, 5.3], note: 'Prediabetes: 5.7–6.4%' },
         }
     },
     pcos: {
@@ -44,14 +46,14 @@ const MARKER_REGISTRY = {
         color: '#7c3aed',
         accent: '#ede9fe',
         markers: {
-            lh:                { label: 'LH',                 unit: 'IU/L',   range: [1, 12],    optimal: [1, 7],     note: 'Varies by cycle day' },
-            fsh:               { label: 'FSH',                unit: 'IU/L',   range: [1, 10],    optimal: [3, 10],    note: 'Day 3 reference: 3–10' },
-            lh_fsh_ratio:      { label: 'LH:FSH Ratio',       unit: 'ratio',  range: [0, 2],     optimal: [0, 1.5],   note: '>2 suggests PCOS' },
-            total_testosterone:{ label: 'Total Testosterone', unit: 'ng/dL',  range: [15, 70],   optimal: [15, 55],   note: 'Female range' },
-            free_testosterone: { label: 'Free Testosterone',  unit: 'pg/mL',  range: [0.1, 6.4], optimal: [0.1, 5.0], note: null },
-            dhea_s:            { label: 'DHEA-S',             unit: 'µg/dL',  range: [35, 430],  optimal: [35, 300],  note: 'Age-dependent' },
-            shbg:              { label: 'SHBG',               unit: 'nmol/L', range: [18, 114],  optimal: [40, 114],  note: 'Low SHBG → more free androgens' },
-            amh:               { label: 'AMH',                unit: 'ng/mL',  range: [1.0, 3.5], optimal: [1.0, 3.5], note: 'High in PCOS (>3.5)' },
+            lh: { label: 'LH', unit: 'IU/L', range: [1, 12], optimal: [1, 7], note: 'Varies by cycle day' },
+            fsh: { label: 'FSH', unit: 'IU/L', range: [1, 10], optimal: [3, 10], note: 'Day 3 reference: 3–10' },
+            lh_fsh_ratio: { label: 'LH:FSH Ratio', unit: 'ratio', range: [0, 2], optimal: [0, 1.5], note: '>2 suggests PCOS' },
+            total_testosterone: { label: 'Total Testosterone', unit: 'ng/dL', range: [15, 70], optimal: [15, 55], note: 'Female range' },
+            free_testosterone: { label: 'Free Testosterone', unit: 'pg/mL', range: [0.1, 6.4], optimal: [0.1, 5.0], note: null },
+            dhea_s: { label: 'DHEA-S', unit: 'µg/dL', range: [35, 430], optimal: [35, 300], note: 'Age-dependent' },
+            shbg: { label: 'SHBG', unit: 'nmol/L', range: [18, 114], optimal: [40, 114], note: 'Low SHBG → more free androgens' },
+            amh: { label: 'AMH', unit: 'ng/mL', range: [1.0, 3.5], optimal: [1.0, 3.5], note: 'High in PCOS (>3.5)' },
         }
     },
     fertility: {
@@ -60,10 +62,10 @@ const MARKER_REGISTRY = {
         color: '#be185d',
         accent: '#fce7f3',
         markers: {
-            amh:       { label: 'AMH',       unit: 'ng/mL', range: [1.0, 3.5], optimal: [1.5, 3.5], note: 'Ovarian reserve marker' },
-            afc:       { label: 'AFC',       unit: 'count', range: [8, 24],    optimal: [10, 24],   note: 'Antral follicle count via ultrasound' },
-            day3_fsh:  { label: 'Day 3 FSH', unit: 'IU/L',  range: [3, 10],    optimal: [3, 8],     note: '>10 may suggest diminished reserve' },
-            estradiol: { label: 'Estradiol', unit: 'pg/mL', range: [12, 166],  optimal: [30, 80],   note: 'Day 3: <80 pg/mL ideal' },
+            amh: { label: 'AMH', unit: 'ng/mL', range: [1.0, 3.5], optimal: [1.5, 3.5], note: 'Ovarian reserve marker' },
+            afc: { label: 'AFC', unit: 'count', range: [8, 24], optimal: [10, 24], note: 'Antral follicle count via ultrasound' },
+            day3_fsh: { label: 'Day 3 FSH', unit: 'IU/L', range: [3, 10], optimal: [3, 8], note: '>10 may suggest diminished reserve' },
+            estradiol: { label: 'Estradiol', unit: 'pg/mL', range: [12, 166], optimal: [30, 80], note: 'Day 3: <80 pg/mL ideal' },
         }
     },
     inflammatory: {
@@ -72,8 +74,8 @@ const MARKER_REGISTRY = {
         color: '#dc2626',
         accent: '#fee2e2',
         markers: {
-            crp:     { label: 'CRP (hs-CRP)', unit: 'mg/L',  range: [0, 1.0],  optimal: [0, 0.5],   note: '<1 low risk; 1–3 moderate; >3 high' },
-            ferritin:{ label: 'Ferritin',     unit: 'ng/mL', range: [12, 150], optimal: [50, 100],  note: 'Optimal for women: 50–100' },
+            crp: { label: 'CRP (hs-CRP)', unit: 'mg/L', range: [0, 1.0], optimal: [0, 0.5], note: '<1 low risk; 1–3 moderate; >3 high' },
+            ferritin: { label: 'Ferritin', unit: 'ng/mL', range: [12, 150], optimal: [50, 100], note: 'Optimal for women: 50–100' },
         }
     },
     general: {
@@ -82,30 +84,24 @@ const MARKER_REGISTRY = {
         color: '#0369a1',
         accent: '#e0f2fe',
         markers: {
-            vitamin_d:   { label: 'Vitamin D (25-OH)', unit: 'ng/mL', range: [30, 80],    optimal: [50, 70],   note: 'Optimal: 50–70' },
-            b12:         { label: 'Vitamin B12',        unit: 'pg/mL', range: [200, 900],  optimal: [400, 900], note: 'Optimal: >400' },
-            iron:        { label: 'Iron (Serum)',        unit: 'µg/dL', range: [60, 170],   optimal: [80, 160],  note: null },
-            haemoglobin: { label: 'Haemoglobin',         unit: 'g/dL',  range: [12.0, 16.0],optimal: [13.0, 16.0],note: 'Female range' },
+            vitamin_d: { label: 'Vitamin D (25-OH)', unit: 'ng/mL', range: [30, 80], optimal: [50, 70], note: 'Optimal: 50–70' },
+            b12: { label: 'Vitamin B12', unit: 'pg/mL', range: [200, 900], optimal: [400, 900], note: 'Optimal: >400' },
+            iron: { label: 'Iron (Serum)', unit: 'µg/dL', range: [60, 170], optimal: [80, 160], note: null },
+            haemoglobin: { label: 'Haemoglobin', unit: 'g/dL', range: [12.0, 16.0], optimal: [13.0, 16.0], note: 'Female range' },
         }
     }
 };
 
 const GOAL_MARKERS = {
     fertility: ['amh', 'day3_fsh', 'lh', 'fsh', 'lh_fsh_ratio', 'estradiol', 'tsh', 'free_t3', 'free_t4'],
-    pcos:      ['lh', 'fsh', 'lh_fsh_ratio', 'total_testosterone', 'free_testosterone', 'dhea_s', 'shbg', 'amh', 'fasting_insulin', 'homa_ir'],
-    thyroid:   ['tsh', 'free_t3', 'free_t4', 'tpo_antibodies', 'tgab'],
+    pcos: ['lh', 'fsh', 'lh_fsh_ratio', 'total_testosterone', 'free_testosterone', 'dhea_s', 'shbg', 'amh', 'fasting_insulin', 'homa_ir'],
+    thyroid: ['tsh', 'free_t3', 'free_t4', 'tpo_antibodies', 'tgab'],
     metabolic: ['fasting_glucose', 'fasting_insulin', 'homa_ir', 'hba1c', 'crp'],
-    general:   ['vitamin_d', 'b12', 'iron', 'haemoglobin', 'ferritin'],
+    general: ['vitamin_d', 'b12', 'iron', 'haemoglobin', 'ferritin'],
 };
 
 // ─── TRAFFIC LIGHT SCORING ─────────────────────────────────────────────────────
 
-/**
- * Returns 'green' | 'amber' | 'red' | 'missing'
- * GREEN  = within OPTIMAL range
- * AMBER  = within clinical range but outside optimal (suboptimal)
- * RED    = outside clinical range entirely
- */
 function getTrafficLight(value, def) {
     if (value === undefined || value === null || value === '') return 'missing';
     const v = parseFloat(value);
@@ -116,20 +112,16 @@ function getTrafficLight(value, def) {
 
     if (v < cLow || v > cHigh) return 'red';
     if (v >= oLow && v <= oHigh) return 'green';
-    return 'amber'; // within clinical but outside optimal
+    return 'amber';
 }
 
 const TRAFFIC_CFG = {
-    green:   { bg: '#dcfce7', text: '#15803d', border: '#86efac', dot: '#22c55e', label: 'OPTIMAL',     emoji: '🟢' },
-    amber:   { bg: '#fef9c3', text: '#92400e', border: '#fde68a', dot: '#f59e0b', label: 'SUBOPTIMAL',  emoji: '🟡' },
-    red:     { bg: '#fee2e2', text: '#991b1b', border: '#fca5a5', dot: '#ef4444', label: 'OUT OF RANGE', emoji: '🔴' },
-    missing: { bg: '#f1f5f9', text: '#94a3b8', border: '#e2e8f0', dot: '#cbd5e1', label: 'NOT TESTED',  emoji: '⚪' },
+    green: { bg: '#dcfce7', text: '#15803d', border: '#86efac', dot: '#22c55e', label: 'OPTIMAL', emoji: '🟢' },
+    amber: { bg: '#fef9c3', text: '#92400e', border: '#fde68a', dot: '#f59e0b', label: 'SUBOPTIMAL', emoji: '🟡' },
+    red: { bg: '#fee2e2', text: '#991b1b', border: '#fca5a5', dot: '#ef4444', label: 'OUT OF RANGE', emoji: '🔴' },
+    missing: { bg: '#f1f5f9', text: '#94a3b8', border: '#e2e8f0', dot: '#cbd5e1', label: 'NOT TESTED', emoji: '⚪' },
 };
 
-/**
- * Roll up all tested markers in a category to a single traffic light.
- * RED if any red; AMBER if any amber; GREEN if all green; MISSING if none tested.
- */
 function getCategoryScore(cat, labData) {
     const statuses = Object.entries(cat.markers).map(([k, def]) => getTrafficLight(labData[k], def));
     const tested = statuses.filter(s => s !== 'missing');
@@ -143,51 +135,44 @@ function getCategoryScore(cat, labData) {
 
 function computeFertilityRisk(labData) {
     const reasons = [];
-    let riskLevel = 'LOW'; // LOW | MODERATE | ELEVATED
+    let riskLevel = 'LOW';
 
-    // LH:FSH ratio > 2
     const lhFsh = parseFloat(labData.lh_fsh_ratio);
     if (!isNaN(lhFsh) && lhFsh > 2) {
         reasons.push('Elevated LH:FSH ratio (>2) — suggests PCOS pattern');
         riskLevel = riskLevel === 'LOW' ? 'MODERATE' : 'ELEVATED';
     }
 
-    // Insulin resistance: HOMA-IR > 2.5
     const homaIr = parseFloat(labData.homa_ir);
     if (!isNaN(homaIr) && homaIr > 2.5) {
         reasons.push('Insulin resistance detected (HOMA-IR >2.5)');
         riskLevel = 'ELEVATED';
     }
 
-    // TSH outside fertility-optimal range 0.5–2.5
     const tsh = parseFloat(labData.tsh);
     if (!isNaN(tsh) && (tsh < 0.5 || tsh > 2.5)) {
         reasons.push(`TSH ${tsh} mIU/L — outside fertility-optimal range (0.5–2.5)`);
         riskLevel = riskLevel === 'LOW' ? 'MODERATE' : 'ELEVATED';
     }
 
-    // AMH low (< 1.0) — diminished reserve
     const amh = parseFloat(labData.amh);
     if (!isNaN(amh) && amh < 1.0) {
         reasons.push('Low AMH (<1.0 ng/mL) — may indicate diminished ovarian reserve');
         riskLevel = 'ELEVATED';
     }
 
-    // Day 3 FSH high > 10
     const fsh = parseFloat(labData.day3_fsh);
     if (!isNaN(fsh) && fsh > 10) {
         reasons.push('Elevated Day 3 FSH (>10 IU/L) — potential diminished reserve');
         riskLevel = 'ELEVATED';
     }
 
-    // High testosterone
     const tt = parseFloat(labData.total_testosterone);
     if (!isNaN(tt) && tt > 70) {
         reasons.push('Elevated total testosterone (>70 ng/dL) — androgen excess');
         riskLevel = riskLevel === 'LOW' ? 'MODERATE' : 'ELEVATED';
     }
 
-    // Vitamin D very low
     const vitD = parseFloat(labData.vitamin_d);
     if (!isNaN(vitD) && vitD < 20) {
         reasons.push('Severe Vitamin D deficiency (<20 ng/mL)');
@@ -197,25 +182,20 @@ function computeFertilityRisk(labData) {
     return { riskLevel, reasons };
 }
 
-// ─── FERTILITY RISK BANNER ─────────────────────────────────────────────────────
-
 const FertilityRiskBanner = ({ labData }) => {
     const { riskLevel, reasons } = computeFertilityRisk(labData);
     const [expanded, setExpanded] = useState(false);
 
     const cfg = {
-        LOW:      { bg: '#f0fdf4', border: '#86efac', accent: '#15803d', badge: '#dcfce7', badgeText: '#15803d', icon: '🟢', label: 'LOW' },
+        LOW: { bg: '#f0fdf4', border: '#86efac', accent: '#15803d', badge: '#dcfce7', badgeText: '#15803d', icon: '🟢', label: 'LOW' },
         MODERATE: { bg: '#fffbeb', border: '#fcd34d', accent: '#92400e', badge: '#fef9c3', badgeText: '#92400e', icon: '🟡', label: 'MODERATE' },
         ELEVATED: { bg: '#fff1f2', border: '#fca5a5', accent: '#991b1b', badge: '#fee2e2', badgeText: '#991b1b', icon: '🔴', label: 'ELEVATED' },
     }[riskLevel];
 
     return (
         <div style={{
-            backgroundColor: cfg.bg,
-            border: `1.5px solid ${cfg.border}`,
-            borderRadius: '16px',
-            padding: '18px 20px',
-            marginBottom: '24px',
+            backgroundColor: cfg.bg, border: `1.5px solid ${cfg.border}`, borderRadius: '16px',
+            padding: '18px 20px', marginBottom: '24px',
         }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -265,7 +245,6 @@ const FertilityRiskBanner = ({ labData }) => {
                     </p>
                 </div>
             )}
-
             {riskLevel === 'LOW' && (
                 <p style={{ fontSize: '10px', fontWeight: 700, color: cfg.accent, margin: '10px 0 0' }}>
                     No significant fertility risk signals detected from available markers.
@@ -280,12 +259,8 @@ const FertilityRiskBanner = ({ labData }) => {
 const CategoryScoreSummary = ({ labData }) => {
     return (
         <div style={{
-            backgroundColor: '#fff',
-            borderRadius: '16px',
-            border: '1px solid #e2e8f0',
-            overflow: 'hidden',
-            marginBottom: '24px',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.06)'
+            backgroundColor: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0',
+            overflow: 'hidden', marginBottom: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)'
         }}>
             <div style={{
                 backgroundColor: '#0F4C5C', padding: '12px 18px',
@@ -307,13 +282,11 @@ const CategoryScoreSummary = ({ labData }) => {
 
                     return (
                         <div key={ck} style={{
-                            display: 'flex', alignItems: 'center', gap: 12,
-                            padding: '10px 18px',
+                            display: 'flex', alignItems: 'center', gap: 12, padding: '10px 18px',
                             borderBottom: '1px solid #f8fafc',
                         }}>
                             <span style={{
-                                width: 28, height: 28, borderRadius: '8px',
-                                backgroundColor: cat.accent,
+                                width: 28, height: 28, borderRadius: '8px', backgroundColor: cat.accent,
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 fontSize: '12px', color: cat.color, fontWeight: 900, flexShrink: 0
                             }}>{cat.icon}</span>
@@ -325,8 +298,7 @@ const CategoryScoreSummary = ({ labData }) => {
                             </span>
                             <span style={{ fontSize: '14px' }}>{cfg.emoji}</span>
                             <span style={{
-                                backgroundColor: cfg.bg, color: cfg.text,
-                                border: `1px solid ${cfg.border}`,
+                                backgroundColor: cfg.bg, color: cfg.text, border: `1px solid ${cfg.border}`,
                                 fontSize: '9px', fontWeight: 900, letterSpacing: '0.12em',
                                 padding: '3px 10px', borderRadius: '99px', minWidth: 90, textAlign: 'center'
                             }}>
@@ -342,15 +314,6 @@ const CategoryScoreSummary = ({ labData }) => {
 
 // ─── LAB ANALYSIS SUB-COMPONENTS ───────────────────────────────────────────────
 
-function getMarkerStatus(value, range) {
-    if (value === undefined || value === null || value === '') return 'missing';
-    const v = parseFloat(value);
-    if (isNaN(v)) return 'missing';
-    if (v < range[0]) return 'low';
-    if (v > range[1]) return 'high';
-    return 'normal';
-}
-
 function findMarkerMeta(key) {
     for (const [, cat] of Object.entries(MARKER_REGISTRY)) {
         if (cat.markers[key]) return { cat, def: cat.markers[key] };
@@ -358,15 +321,12 @@ function findMarkerMeta(key) {
     return null;
 }
 
-// Enhanced StatusPill using traffic-light
 const TrafficPill = ({ status }) => {
     const cfg = TRAFFIC_CFG[status] || TRAFFIC_CFG.missing;
     return (
         <span style={{
-            backgroundColor: cfg.bg, color: cfg.text,
-            border: `1px solid ${cfg.border}`,
-            fontSize: '9px', fontWeight: 900, letterSpacing: '0.12em',
-            padding: '2px 8px', borderRadius: '99px', whiteSpace: 'nowrap',
+            backgroundColor: cfg.bg, color: cfg.text, border: `1px solid ${cfg.border}`,
+            fontSize: '9px', fontWeight: 900, letterSpacing: '0.12em', padding: '2px 8px', borderRadius: '99px', whiteSpace: 'nowrap',
             display: 'inline-flex', alignItems: 'center', gap: 4
         }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: cfg.dot, flexShrink: 0 }} />
@@ -388,15 +348,10 @@ const MarkerRow = ({ markerKey, def, value, patientLabRanges }) => {
 
     return (
         <div style={{
-            display: 'flex', alignItems: 'center', gap: '10px',
-            padding: '9px 12px', borderRadius: '10px', marginBottom: '5px',
-            backgroundColor: cfg.bg,
-            border: `1px solid ${cfg.border}`
+            display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', borderRadius: '10px', marginBottom: '5px',
+            backgroundColor: cfg.bg, border: `1px solid ${cfg.border}`
         }}>
-            <span style={{
-                width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-                backgroundColor: cfg.dot
-            }} />
+            <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, backgroundColor: cfg.dot }} />
             <div style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ fontSize: '11px', fontWeight: 800, color: '#1e293b', display: 'block' }}>{def.label}</span>
                 {isSuboptimal && optRange && (
@@ -427,10 +382,7 @@ const MissingMarkersAlert = ({ goal, presentKeys }) => {
     const missing = required.filter(k => !presentKeys.includes(k));
     if (missing.length === 0) return null;
     return (
-        <div style={{
-            backgroundColor: '#fff7ed', border: '1px solid #fed7aa',
-            borderRadius: '12px', padding: '14px 16px', marginBottom: '16px'
-        }}>
+        <div style={{ backgroundColor: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '12px', padding: '14px 16px', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <AlertTriangle size={14} color="#ea580c" />
                 <span style={{ fontSize: '10px', fontWeight: 900, color: '#ea580c', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
@@ -444,10 +396,8 @@ const MissingMarkersAlert = ({ goal, presentKeys }) => {
                     const { cat, def } = found;
                     return (
                         <span key={k} style={{
-                            backgroundColor: '#fff', border: '1px solid #fed7aa',
-                            borderRadius: '99px', padding: '3px 10px',
-                            fontSize: '10px', fontWeight: 800, color: '#92400e',
-                            display: 'flex', alignItems: 'center', gap: 4
+                            backgroundColor: '#fff', border: '1px solid #fed7aa', borderRadius: '99px', padding: '3px 10px',
+                            fontSize: '10px', fontWeight: 800, color: '#92400e', display: 'flex', alignItems: 'center', gap: 4
                         }}>
                             {def.label}
                             <span style={{ color: '#cbd5e1' }}>·</span>
@@ -469,22 +419,18 @@ const CategorySection = ({ cat, labData, patientLabRanges }) => {
 
     return (
         <div style={{
-            backgroundColor: '#fff', borderRadius: '14px',
-            border: `1px solid ${scoreCfg.border}`, marginBottom: '10px', overflow: 'hidden',
+            backgroundColor: '#fff', borderRadius: '14px', border: `1px solid ${scoreCfg.border}`, marginBottom: '10px', overflow: 'hidden',
             boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
         }}>
             <button onClick={() => setOpen(o => !o)} style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                padding: '12px 16px', background: 'none', border: 'none', cursor: 'pointer',
+                width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'none', border: 'none', cursor: 'pointer',
                 borderBottom: open ? '1px solid #f1f5f9' : 'none'
             }}>
                 <span style={{
-                    width: 30, height: 30, borderRadius: '8px', backgroundColor: cat.accent,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 30, height: 30, borderRadius: '8px', backgroundColor: cat.accent, display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: '13px', flexShrink: 0, color: cat.color, fontWeight: 900
                 }}>{cat.icon}</span>
-                <span style={{ flex: 1, textAlign: 'left', fontSize: '11px', fontWeight: 900,
-                    color: '#1e293b', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                <span style={{ flex: 1, textAlign: 'left', fontSize: '11px', fontWeight: 900, color: '#1e293b', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                     {cat.label}
                 </span>
                 <span style={{ fontSize: '9px', fontWeight: 800, color: '#94a3b8', marginRight: 6 }}>
@@ -492,10 +438,8 @@ const CategorySection = ({ cat, labData, patientLabRanges }) => {
                 </span>
                 <span style={{ fontSize: '13px', marginRight: 4 }}>{scoreCfg.emoji}</span>
                 <span style={{
-                    backgroundColor: scoreCfg.bg, color: scoreCfg.text,
-                    border: `1px solid ${scoreCfg.border}`,
-                    fontSize: '9px', fontWeight: 900, padding: '2px 8px',
-                    borderRadius: '99px', marginRight: 6, letterSpacing: '0.1em'
+                    backgroundColor: scoreCfg.bg, color: scoreCfg.text, border: `1px solid ${scoreCfg.border}`,
+                    fontSize: '9px', fontWeight: 900, padding: '2px 8px', borderRadius: '99px', marginRight: 6, letterSpacing: '0.1em'
                 }}>{scoreCfg.label}</span>
                 {open ? <ChevronUp size={13} color="#94a3b8" /> : <ChevronDown size={13} color="#94a3b8" />}
             </button>
@@ -549,7 +493,6 @@ const LabAnalysis = ({ labData = {}, patientGoal = 'general', patientLabRanges =
 
     return (
         <div>
-            {/* Section Header */}
             <div className="flex items-center gap-2 mb-5">
                 <FlaskConical size={16} color="#0F4C5C" />
                 <h2 className="text-[11px] font-black text-[#1F2937]/40 uppercase tracking-widest">
@@ -557,20 +500,17 @@ const LabAnalysis = ({ labData = {}, patientGoal = 'general', patientLabRanges =
                 </h2>
             </div>
 
-            {/* Traffic Light Summary Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 20 }}>
                 {[
                     { label: 'Total Markers', value: totalMarkers, color: '#0F4C5C', bg: '#f0fdf9', border: '#99f6e4' },
-                    { label: 'Optimal',       value: greenCount,   color: '#15803d', bg: '#f0fdf4', border: '#86efac' },
-                    { label: 'Suboptimal',    value: amberCount,   color: '#92400e', bg: '#fffbeb', border: '#fde68a' },
-                    { label: 'Out of Range',  value: redCount,     color: redCount > 0 ? '#dc2626' : '#15803d', bg: redCount > 0 ? '#fef2f2' : '#f0fdf4', border: redCount > 0 ? '#fca5a5' : '#86efac' },
+                    { label: 'Optimal', value: greenCount, color: '#15803d', bg: '#f0fdf4', border: '#86efac' },
+                    { label: 'Suboptimal', value: amberCount, color: '#92400e', bg: '#fffbeb', border: '#fde68a' },
+                    { label: 'Out of Range', value: redCount, color: redCount > 0 ? '#dc2626' : '#15803d', bg: redCount > 0 ? '#fef2f2' : '#f0fdf4', border: redCount > 0 ? '#fca5a5' : '#86efac' },
                 ].map(c => (
                     <div key={c.label} style={{
-                        backgroundColor: c.bg, borderRadius: '12px',
-                        padding: '12px 14px', border: `1px solid ${c.border}`
+                        backgroundColor: c.bg, borderRadius: '12px', padding: '12px 14px', border: `1px solid ${c.border}`
                     }}>
-                        <p style={{ fontSize: '8px', fontWeight: 800, color: '#64748b',
-                            textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 4px' }}>
+                        <p style={{ fontSize: '8px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 4px' }}>
                             {c.label}
                         </p>
                         <p style={{ fontSize: '24px', fontWeight: 900, color: c.color, margin: 0, lineHeight: 1 }}>
@@ -580,15 +520,12 @@ const LabAnalysis = ({ labData = {}, patientGoal = 'general', patientLabRanges =
                 ))}
             </div>
 
-            {/* Fertility Risk Banner */}
             {(patientGoal === 'fertility' || patientGoal === 'pcos') && (
                 <FertilityRiskBanner labData={labData} />
             )}
 
-            {/* Category Score Summary */}
             <CategoryScoreSummary labData={labData} />
 
-            {/* Goal Selector */}
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
                 {Object.keys(GOAL_MARKERS).map(g => (
                     <button key={g} onClick={() => setActiveGoal(g)} style={{
@@ -601,13 +538,10 @@ const LabAnalysis = ({ labData = {}, patientGoal = 'general', patientLabRanges =
                 ))}
             </div>
 
-            {/* Missing Markers Alert */}
             <MissingMarkersAlert goal={activeGoal} presentKeys={presentKeys} />
 
-            {/* Search */}
             <div style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                backgroundColor: '#f8fafc', borderRadius: '10px',
+                display: 'flex', alignItems: 'center', gap: 8, backgroundColor: '#f8fafc', borderRadius: '10px',
                 border: '1px solid #e2e8f0', padding: '8px 12px', marginBottom: 14
             }}>
                 <Search size={12} color="#94a3b8" />
@@ -616,16 +550,13 @@ const LabAnalysis = ({ labData = {}, patientGoal = 'general', patientLabRanges =
                     onChange={e => setSearchQuery(e.target.value)}
                     placeholder="Search markers…"
                     style={{
-                        border: 'none', background: 'none', outline: 'none',
-                        fontSize: '11px', fontWeight: 600, color: '#1e293b', width: '100%'
+                        border: 'none', background: 'none', outline: 'none', fontSize: '11px', fontWeight: 600, color: '#1e293b', width: '100%'
                     }}
                 />
             </div>
 
-            {/* Legend */}
             <div style={{
-                display: 'flex', gap: 10, flexWrap: 'wrap',
-                backgroundColor: '#f8fafc', border: '1px solid #e2e8f0',
+                display: 'flex', gap: 10, flexWrap: 'wrap', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0',
                 borderRadius: '10px', padding: '10px 14px', marginBottom: 14
             }}>
                 <span style={{ fontSize: '9px', fontWeight: 800, color: '#64748b', letterSpacing: '0.1em', textTransform: 'uppercase', marginRight: 4 }}>Key:</span>
@@ -641,10 +572,8 @@ const LabAnalysis = ({ labData = {}, patientGoal = 'general', patientLabRanges =
                 ))}
             </div>
 
-            {/* Lab Range Disclaimer */}
             <div style={{
-                display: 'flex', alignItems: 'flex-start', gap: 8,
-                backgroundColor: '#f0f9ff', border: '1px solid #bae6fd',
+                display: 'flex', alignItems: 'flex-start', gap: 8, backgroundColor: '#f0f9ff', border: '1px solid #bae6fd',
                 borderRadius: '10px', padding: '10px 14px', marginBottom: 18
             }}>
                 <Info size={12} color="#0369a1" style={{ flexShrink: 0, marginTop: 2 }} />
@@ -655,7 +584,6 @@ const LabAnalysis = ({ labData = {}, patientGoal = 'general', patientLabRanges =
                 </p>
             </div>
 
-            {/* Category Sections */}
             {filteredCategories.map(([ck, cat]) => (
                 <CategorySection key={ck} cat={cat} labData={labData} patientLabRanges={patientLabRanges} />
             ))}
@@ -663,11 +591,149 @@ const LabAnalysis = ({ labData = {}, patientGoal = 'general', patientLabRanges =
     );
 };
 
+// ─── INTAKE SUMMARY COMPONENT ─────────────────────────────────────────────
+
+const IntakeSummary = ({ intake }) => {
+    if (!intake || Object.keys(intake).length === 0) return null;
+
+    return (
+        <section className="print-full-width" style={{ breakInside: 'avoid', marginBottom: '32px' }}>
+            <div className="flex items-center gap-2 mb-5">
+                <ClipboardList size={16} color="#0F4C5C" />
+                <h2 className="text-[11px] font-black text-[#1F2937]/40 uppercase tracking-widest">
+                    Patient Intake Summary
+                </h2>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl border border-black/10 print:border-black print:border-[0.5pt] shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                {intake.diagnoses && intake.diagnoses.length > 0 && (
+                    <div>
+                        <h3 className="text-[10px] font-black text-[#0F4C5C] uppercase tracking-widest mb-3">Diagnosed Conditions</h3>
+                        <div className="flex flex-wrap gap-2">
+                            {intake.diagnoses.map((d, i) => (
+                                <span key={i} className="bg-[#e0f2fe] text-[#0369a1] px-3 py-1.5 rounded-md text-[10px] font-bold border border-[#bae6fd]">
+                                    {d}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {intake.symptoms && intake.symptoms.length > 0 && (
+                    <div>
+                        <h3 className="text-[10px] font-black text-[#0F4C5C] uppercase tracking-widest mb-3">Current Symptoms</h3>
+                        <div className="flex flex-wrap gap-2">
+                            {intake.symptoms.map((s, i) => (
+                                <span key={i} className="bg-[#fef3c7] text-[#92400e] px-3 py-1.5 rounded-md text-[10px] font-bold border border-[#fde68a]">
+                                    {s}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {intake.goals && (
+                    <div className="md:col-span-2">
+                        <h3 className="text-[10px] font-black text-[#0F4C5C] uppercase tracking-widest mb-2">Primary Goals (Next 3 Months)</h3>
+                        <p className="text-sm text-gray-700 bg-gray-50 p-4 rounded-lg border border-gray-100 leading-relaxed">
+                            {intake.goals}
+                        </p>
+                    </div>
+                )}
+
+                {intake.stated_concern && (
+                    <div className="md:col-span-2">
+                        <h3 className="text-[10px] font-black text-[#0F4C5C] uppercase tracking-widest mb-2">Main Request / Extra Notes</h3>
+                        <p className="text-sm text-gray-700 bg-[#f0fdf4] p-4 rounded-lg border border-[#86efac] leading-relaxed">
+                            {intake.stated_concern}
+                        </p>
+                    </div>
+                )}
+            </div>
+        </section>
+    );
+};
+
+// ─── PATIENT REVIEW VIEW COMPONENT ──────────────────────────────────────────
+
+const PatientReviewView = ({ reviews }) => {
+    if (!reviews || reviews.length === 0) return null;
+
+    const latestReview = reviews[0];
+    const date = new Date(latestReview.sent_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+    // Split to remove the AI summary text from the patient view
+    const cleanMessage = latestReview.message_text
+        ? latestReview.message_text.split('=== AI SUMMARY REFERENCE ===')[0].trim()
+        : '';
+
+    return (
+        <section className="mb-8 print-full-width" style={{ breakInside: 'avoid' }}>
+            <div className="flex items-center gap-2 mb-4">
+                <CheckCircle2 size={18} color="#0F4C5C" />
+                <h2 className="text-[11px] font-black text-[#1F2937]/40 uppercase tracking-widest">
+                    Your Specialist's Review
+                </h2>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-xl shadow-[#0F4C5C]/5 border border-[#0F4C5C]/20 overflow-hidden">
+                <div className="bg-[#f0f9ff] border-b border-[#bae6fd] px-6 py-4 flex justify-between items-center flex-wrap gap-2">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-[#0F4C5C] text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs">
+                            {latestReview.reviewed_by?.charAt(0) || 'S'}
+                        </div>
+                        <div>
+                            <p className="text-sm font-black text-gray-900">{latestReview.reviewed_by || 'Specialist'}</p>
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{date}</p>
+                        </div>
+                    </div>
+
+                    {latestReview.next_step && (
+                        <span className="bg-[#e0f2fe] text-[#0369a1] border border-[#bae6fd] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                            Next Step: {latestReview.next_step}
+                        </span>
+                    )}
+                </div>
+
+                <div className="p-6">
+                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap font-medium">
+                        {cleanMessage}
+                    </p>
+                </div>
+
+                {latestReview.protocol_attachment_url && (
+                    <div className="bg-gray-50 px-6 py-4 border-t border-gray-100 flex items-center gap-3">
+                        <FileText size={18} className="text-[#0F4C5C]" />
+                        <div className="flex-1">
+                            <p className="text-xs font-bold text-gray-800 uppercase tracking-wide">Protocol Attachment</p>
+                        </div>
+                        <a
+                            href={latestReview.protocol_attachment_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-[#0F4C5C] text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#0a3540] transition-colors"
+                        >
+                            View Document
+                        </a>
+                    </div>
+                )}
+            </div>
+        </section>
+    );
+};
+
 // ─── MAIN DASHBOARD ────────────────────────────────────────────────────────────
 
 const Dashboard = ({ patientId }) => {
-    const [data, setData] = useState({ labs: [], symptoms: [] });
+    const navigate = useNavigate();
+    const [data, setData] = useState({ labs: [], symptoms: [], specialistReviews: [] });
     const [demographics, setDemographics] = useState({ age: '—', gender: '—' });
+    const [intakeData, setIntakeData] = useState(null);
+
+    // ✅ HOOK MOVED HERE: Safely inside the component
+    const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+
     const [isMounted, setIsMounted] = useState(false);
     const [loading, setLoading] = useState(true);
 
@@ -691,8 +757,13 @@ const Dashboard = ({ patientId }) => {
             setLoading(true);
             const res = await axios.get(`${baseURL}/api/patient/dashboard/${patientId}`);
             if (res.data.success) {
-                setData({ labs: res.data.labs, symptoms: res.data.symptoms });
+                setData({
+                    labs: res.data.labs,
+                    symptoms: res.data.symptoms,
+                    specialistReviews: res.data.specialistReviews
+                });
                 setDemographics(res.data.profile);
+                setIntakeData(res.data.intake);
             }
         } catch (err) {
             console.error("Fetch error", err);
@@ -808,9 +879,7 @@ const Dashboard = ({ patientId }) => {
                                     tickLine={true}
                                     domain={['auto', 'auto']}
                                     label={{
-                                        value: meta.unit || 'Value',
-                                        angle: -90,
-                                        position: 'insideLeft',
+                                        value: meta.unit || 'Value', angle: -90, position: 'insideLeft',
                                         style: { textAnchor: 'middle', fontSize: 8, fontWeight: 900, fill: '#cbd5e1', textTransform: 'uppercase' }
                                     }}
                                 />
@@ -836,7 +905,8 @@ const Dashboard = ({ patientId }) => {
 
     return (
         <div className="min-h-screen bg-[#F7F1E8] p-4 md:p-8">
-            <style dangerouslySetInnerHTML={{ __html: `
+            <style dangerouslySetInnerHTML={{
+                __html: `
                 @media print {
                     @page { size: A4; margin: 0; }
                     body { background-color: #F7F1E8 !important; -webkit-print-color-adjust: exact; margin: 0 !important; }
@@ -857,7 +927,6 @@ const Dashboard = ({ patientId }) => {
             `}} />
 
             <div className="max-w-6xl mx-auto">
-                {/* Dashboard Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 no-print">
                     <div className="flex items-center gap-4">
                         <Activity className="text-[#0F4C5C]" size={36} />
@@ -882,7 +951,6 @@ const Dashboard = ({ patientId }) => {
                 </div>
 
                 <div ref={dashboardRef} id="dashboard-content" className="space-y-8 bg-[#F7F1E8]">
-                    {/* Print Header */}
                     <div className="hidden print-only flex-row justify-between items-center border-b-[1.5pt] border-black pb-4 mb-6">
                         <div className="flex items-center gap-3">
                             <Shield className="text-[#0F4C5C]" size={40} />
@@ -900,7 +968,11 @@ const Dashboard = ({ patientId }) => {
                         </div>
                     </div>
 
-                    {/* ── Biomarker Trends ── */}
+                    {/* ── NEW: PATIENT REVIEW VIEW ── */}
+                    <PatientReviewView reviews={data.specialistReviews} />
+
+                    <IntakeSummary intake={intakeData} />
+
                     <section className="print-full-width">
                         <h2 className="text-[11px] font-black text-[#1F2937]/40 uppercase tracking-widest mb-4">Biomarker Trends & Lab Ranges</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 print:block">
@@ -910,7 +982,6 @@ const Dashboard = ({ patientId }) => {
                         </div>
                     </section>
 
-                    {/* ── Lab Marker Analysis & Normalisation ── */}
                     <section className="print-full-width" style={{ breakInside: 'avoid' }}>
                         <div className="bg-white p-6 rounded-xl border border-black/10 print:border-black print:border-[0.5pt] shadow-sm">
                             <LabAnalysis
@@ -921,7 +992,6 @@ const Dashboard = ({ patientId }) => {
                         </div>
                     </section>
 
-                    {/* ── Symptom Correlation Trends ── */}
                     <section className="print-full-width" style={{ breakInside: 'avoid' }}>
                         <h2 className="text-[11px] font-black text-[#1F2937]/40 uppercase tracking-widest mb-4">Symptom Correlation Trends</h2>
                         <div className="bg-white p-6 rounded-xl border border-black/10 print:border-black print:border-[0.5pt]">
@@ -933,10 +1003,10 @@ const Dashboard = ({ patientId }) => {
                                             <XAxis dataKey="date" tick={{ fontSize: 10 }} axisLine={false} />
                                             <YAxis domain={[0, 10]} tick={{ fontSize: 10 }} axisLine={false} />
                                             <Legend verticalAlign="top" height={40} iconType="circle" />
-                                            <Line name="Energy"     type="monotone" dataKey="energy"     stroke="#f59e0b" strokeWidth={3} isAnimationActive={false} />
-                                            <Line name="Sleep"      type="monotone" dataKey="sleep"      stroke="#0F4C5C" strokeWidth={3} isAnimationActive={false} />
-                                            <Line name="Mood"       type="monotone" dataKey="mood"       stroke="#10b981" strokeWidth={3} isAnimationActive={false} />
-                                            <Line name="Stress"     type="monotone" dataKey="stress"     stroke="#ef4444" strokeWidth={3} isAnimationActive={false} />
+                                            <Line name="Energy" type="monotone" dataKey="energy" stroke="#f59e0b" strokeWidth={3} isAnimationActive={false} />
+                                            <Line name="Sleep" type="monotone" dataKey="sleep" stroke="#0F4C5C" strokeWidth={3} isAnimationActive={false} />
+                                            <Line name="Mood" type="monotone" dataKey="mood" stroke="#10b981" strokeWidth={3} isAnimationActive={false} />
+                                            <Line name="Stress" type="monotone" dataKey="stress" stroke="#ef4444" strokeWidth={3} isAnimationActive={false} />
                                             <Line name="Joint Pain" type="monotone" dataKey="joint_pain" stroke="#8b5cf6" strokeWidth={3} isAnimationActive={false} />
                                         </LineChart>
                                     </ResponsiveContainer>
@@ -945,7 +1015,6 @@ const Dashboard = ({ patientId }) => {
                         </div>
                     </section>
 
-                    {/* ── AI Insights ── */}
                     <section className="print-full-width">
                         <div className="bg-white p-6 rounded-xl border border-black/10 print:border-black print:border-[0.5pt] shadow-sm">
                             <AIInsights
@@ -953,11 +1022,52 @@ const Dashboard = ({ patientId }) => {
                                 labData={getMergedLabData()}
                                 patientGoal={demographics.goal || 'general'}
                                 demographics={demographics}
+                                intake={intakeData} 
                             />
                         </div>
+
                     </section>
 
-                    {/* ── Request Appointment ── */}
+                    {/* ── BUTTON TO NAVIGATE TO NEW PAGE ── */}
+                    <section className="no-print pt-8 flex justify-center">
+                        <button
+                            disabled={isGeneratingSummary}
+                            onClick={async () => {
+                                setIsGeneratingSummary(true);
+                                try {
+                                    // 1. Ask the backend to generate the AI insights based on ALL data
+                                    const response = await axios.get(`${baseURL}/api/patient/insights/${patientId}`);
+                                    const generatedInsights = response.data.success ? response.data.insights : "AI Analysis unavailable.";
+
+                                    // 2. Navigate to the new page and pass the fresh insights through state
+                                    navigate(`/clinical-summary/${patientId}`, {
+                                        state: {
+                                            profile: demographics,
+                                            intake: intakeData,
+                                            labData: getMergedLabData(),
+                                            aiInsights: generatedInsights // <-- Replaced null with actual AI data!
+                                        }
+                                    });
+                                } catch (err) {
+                                    console.error("Failed to generate insights:", err);
+                                    alert("Failed to generate AI insights. Please try again.");
+                                } finally {
+                                    setIsGeneratingSummary(false);
+                                }
+                            }}
+                            className={`px-8 py-5 rounded-2xl font-black uppercase text-sm tracking-widest transition-all flex items-center justify-center gap-3 shadow-xl w-full max-w-lg ${isGeneratingSummary
+                                    ? 'bg-gray-400 text-white cursor-not-allowed'
+                                    : 'bg-[#0F4C5C] text-[#F7F1E8] hover:scale-[1.02] active:scale-95'
+                                }`}
+                        >
+                            {isGeneratingSummary ? (
+                                <><Loader2 className="animate-spin" size={22} /> Analyzing Patient Data...</>
+                            ) : (
+                                <><FilePlus size={22} /> Generate Clinical Summary</>
+                            )}
+                        </button>
+                    </section>
+
                     <section className="no-print pt-8 pb-12">
                         <div className="bg-[#0F4C5C] rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between shadow-2xl shadow-[#0F4C5C]/20 border border-white/10">
                             <button

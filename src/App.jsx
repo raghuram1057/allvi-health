@@ -8,6 +8,7 @@ import AdminPortal from './components/AdminPortal';
 import PatientProfile from './components/PatientProfile';
 import UserPortal from './components/UserPortal';
 import RegisterPage from './components/RegisterPage';
+import ClinicalSummary from './components/ClinicalSummary';
 
 // Simple wrapper for the Dashboard to extract the ID from URL
 const DashboardWrapper = () => {
@@ -47,7 +48,7 @@ function App() {
           <Route path="/review" element={<Phase1Review />} />
           <Route path="/dashboard/:id" element={<DashboardWrapper />} />
           <Route path="/profile/:patientId" element={<PatientProfile />} />
-
+          <Route path="/clinical-summary/:patientId" element={<ClinicalSummary/>} />
           {/* Admin Route */}
           <Route path="/admin" element={<AdminPortal />} />
           
