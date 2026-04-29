@@ -725,13 +725,12 @@ const PatientReviewView = ({ reviews }) => {
 
 // ─── MAIN DASHBOARD ────────────────────────────────────────────────────────────
 
-const Dashboard = () => {
+const Dashboard = ({patientId}) => {
     const navigate = useNavigate();
     const [data, setData] = useState({ labs: [], symptoms: [], specialistReviews: [] });
     const [demographics, setDemographics] = useState({ age: '—', gender: '—' });
     const [intakeData, setIntakeData] = useState(null);
-    const { patientId } = useParams();
-
+   
     // ✅ HOOK MOVED HERE: Safely inside the component
     const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
